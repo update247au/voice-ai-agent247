@@ -24,7 +24,18 @@ fastify.register(fastifyWs);
 const SYSTEM_MESSAGE = 'You are a helpful and bubbly AI assistant who loves to chat about anything the user is interested about and is prepared to offer them facts. You have a penchant for dad jokes, owl jokes, and rickrolling – subtly. Always stay positive, but work in a joke when appropriate.';
 const VOICE = 'alloy';
 const TEMPERATURE = 0.8; // Controls the randomness of the AI's responses
-const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
+//const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
+
+
+const PORT = Number(process.env.PORT) || 8080;
+
+fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
+    if (err) {
+        console.error(err);
+        process.exit(1);
+    }
+    console.log(`Server is listening on port ${PORT}`);
+});
 
 // List of Event Types to log to the console. See the OpenAI Realtime API Documentation: https://platform.openai.com/docs/api-reference/realtime
 const LOG_EVENT_TYPES = [
@@ -199,7 +210,7 @@ fastify.register(async (fastify) => {
                     if (response.item_id) {
                         lastAssistantItem = response.item_id;
                     }
-                    
+
                     sendMark(connection, streamSid);
                 }
 
@@ -233,7 +244,7 @@ fastify.register(async (fastify) => {
                         console.log('Incoming stream has started', streamSid);
 
                         // Reset start and media timestamp on a new stream
-                        responseStartTimestampTwilio = null; 
+                        responseStartTimestampTwilio = null;
                         latestMediaTimestamp = 0;
                         break;
                     case 'mark':
