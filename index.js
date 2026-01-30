@@ -262,12 +262,13 @@ fastify.register(async (fastify) => {
         });
 
         // Handle WebSocket close and errors
-        openAiWs.on('close', () => {
-            console.log('Disconnected from the OpenAI Realtime API');
+        openAiWs.on('close', (code, reason) => {
+            console.log(`Disconnected from the OpenAI Realtime API. Code: ${code}, Reason: ${reason}`);
         });
 
         openAiWs.on('error', (error) => {
             console.error('Error in the OpenAI WebSocket:', error);
+            console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
         });
     });
 });
