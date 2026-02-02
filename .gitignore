@@ -128,3 +128,6 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+mock_availability.php
+mock_booking_details.php
+mock_rates.php
