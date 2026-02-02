@@ -21,7 +21,7 @@ fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
 // Constants
-const SYSTEM_MESSAGE = 'You are the AI Support Specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only. LIMITATIONS: Do NOT access credentials, make account changes, or provide legal/financial advice. ESCALATION: For account-specific issues, billing, or complex connectivity problems, direct the user to contact Update247 support.';
+const SYSTEM_MESSAGE = 'You are the AI Support Specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. CONFIRMATION: If the user asks to check status or updates without specifying "availability" or "rates", you MUST ask: "Would you like me to check availability or rates?" before calling any tools. LANGUAGE: You must ALWAYS speak and respond in English only. LIMITATIONS: Do NOT access credentials, make account changes, or provide legal/financial advice. ESCALATION: For account-specific issues, billing, or complex connectivity problems, direct the user to contact Update247 support.';
 const VOICE = 'alloy';
 
 const TEMPERATURE = 0.4; // Controls the randomness of the AI's responses
@@ -246,9 +246,9 @@ fastify.register(async (fastify) => {
                     const callId = response.call_id;
                     const functionName = response.name;
 
-                    let functionResult = "I couldn't find that information.";
+                    let functionResult = JSON.stringify({ ok: false, error: "not_found" });
 
-                    // Handle specific function callss
+                    // Handle specific function calls
                     if (functionName === 'query_update247_details') {
                         const args = JSON.parse(iframe);
                         console.log('Executing query_update247_details with args:', args);
@@ -266,7 +266,7 @@ fastify.register(async (fastify) => {
                                 url = `${API_BASE_URL}/mock_booking_details.php`;
                             } else if (args.query_type === 'connection_status') {
                                 // Fallback mock for connection status if no file exists
-                                functionResult = JSON.stringify({ status: 'success', data: 'All channel connections are active.' });
+                                functionResult = JSON.stringify({ ok: true, data: 'All channel connections are active.' });
                             }
 
                             if (url) {
@@ -285,7 +285,7 @@ fastify.register(async (fastify) => {
 
                                     const data = await apiResponse.json();
                                     console.log('Parameters received from API:', data);
-                                    functionResult = JSON.stringify(data);
+                                    functionResult = JSON.stringify({ ok: true, data: data });
                                 } catch (fetchError) {
                                     clearTimeout(timeoutId);
                                     throw fetchError;
@@ -293,7 +293,7 @@ fastify.register(async (fastify) => {
                             }
                         } catch (err) {
                             console.error('Error fetching data:', err.message);
-                            functionResult = `I encountered an error accessing the system: ${err.message}. Please check the server logs.`;
+                            functionResult = JSON.stringify({ ok: false, error: err.message });
                         }
                     }
 
@@ -303,12 +303,14 @@ fastify.register(async (fastify) => {
                         item: {
                             type: 'function_call_output',
                             call_id: callId,
-                            output: functionResult
+                            output: functionResult // This must be a JSON string
                         }
                     };
+                    console.log('Sending function output to OpenAI:', JSON.stringify(functionOutputEvent));
                     openAiWs.send(JSON.stringify(functionOutputEvent));
 
                     // Trigger a new response to speak the result
+                    console.log('Triggering new response...');
                     openAiWs.send(JSON.stringify({ type: 'response.create' }));
                 }
             } catch (error) {
