@@ -57,9 +57,9 @@ fastify.get('/', async (request, reply) => {
 fastify.all('/incoming-call', async (request, reply) => {
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede">Please wait while we connect your call to the A. I. voice assistant, powered by Update 2 4 7</Say>
+                              <Say voice="Google.en-US-Chirp3-HD-Aoede">Please wait while we connect your call to Update 2 4 7 friendly support agent</Say>
                               <Pause length="1"/>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede">O.K. Darling,do you want a joke or a fact</Say>
+                              <Say voice="Google.en-US-Chirp3-HD-Aoede">O.K., please tell me how can we assit you today in few words</Say>
                               <Connect>
                                   <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream" />
                               </Connect>
