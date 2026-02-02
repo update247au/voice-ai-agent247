@@ -248,7 +248,7 @@ fastify.register(async (fastify) => {
 
                     let functionResult = "I couldn't find that information.";
 
-                    // Handle specific function calls
+                    // Handle specific function callss
                     if (functionName === 'query_update247_details') {
                         const args = JSON.parse(iframe);
                         console.log('Executing query_update247_details with args:', args);
