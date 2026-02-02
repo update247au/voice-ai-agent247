@@ -23,10 +23,8 @@ fastify.register(fastifyWs);
 // Constants
 const SYSTEM_MESSAGE = 'You are the AI Support Specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only. LIMITATIONS: Do NOT access credentials, make account changes, or provide legal/financial advice. ESCALATION: For account-specific issues, billing, or complex connectivity problems, direct the user to contact Update247 support.';
 const VOICE = 'alloy';
-// const VOICE = 'sage';
-//const VOICE = 'marin';
+
 const TEMPERATURE = 0.4; // Controls the randomness of the AI's responses
-const SPEAKING_RATE = 0.85; // Controls the speed of the AI's speech
 //const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
 
 
@@ -85,9 +83,9 @@ fastify.get('/', async (request, reply) => {
 fastify.all('/incoming-call', async (request, reply) => {
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede">Please wait while we connect your call to Update 2 4 7 friendly support agent</Say>
+                              <Say voice="Google.en-US-Chirp3-HD-Aoede">Connecting your call to Update 2 4 7</Say>
                               <Pause length="1"/>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede">O.K., please tell me how can we assist you today in few words</Say>
+                              <Say voice="Google.en-US-Chirp3-HD-Aoede">How can we assist you today ?</Say>
                               <Connect>
                                   <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream" />
                               </Connect>
