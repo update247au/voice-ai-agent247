@@ -271,13 +271,29 @@ fastify.register(async (fastify) => {
 
                             if (url) {
                                 console.log(`Fetching data from: ${url}`);
-                                const apiResponse = await fetch(url);
-                                const data = await apiResponse.json();
-                                functionResult = JSON.stringify(data);
+                                // Fetch with 5s timeout
+                                const controller = new AbortController();
+                                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                                try {
+                                    const apiResponse = await fetch(url, { signal: controller.signal });
+                                    clearTimeout(timeoutId);
+
+                                    if (!apiResponse.ok) {
+                                        throw new Error(`HTTP error! status: ${apiResponse.status}`);
+                                    }
+
+                                    const data = await apiResponse.json();
+                                    console.log('Parameters received from API:', data);
+                                    functionResult = JSON.stringify(data);
+                                } catch (fetchError) {
+                                    clearTimeout(timeoutId);
+                                    throw fetchError;
+                                }
                             }
                         } catch (err) {
-                            console.error('Error fetching data:', err);
-                            functionResult = "There was an error retrieving the information. Please check the system logs.";
+                            console.error('Error fetching data:', err.message);
+                            functionResult = `I encountered an error accessing the system: ${err.message}. Please check the server logs.`;
                         }
                     }
 
