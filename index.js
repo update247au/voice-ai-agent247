@@ -190,7 +190,7 @@ fastify.register(async (fastify) => {
             }
         };
 
-        // Send mark messages to Media Streams so we know if and when AI response playback is finished
+        // Send mark messages to Media Streams so we know if and when AI response playback is finisheds
         const sendMark = (connection, streamSid) => {
             if (streamSid) {
                 const markEvent = {
@@ -365,4 +365,4 @@ fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
         process.exit(1);
     }
     console.log(`Server is listening on port ${PORT}`);
-});
+}); 
