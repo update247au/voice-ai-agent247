@@ -93,12 +93,14 @@ fastify.register(async (fastify) => {
             const sessionUpdate = {
                 type: 'session.update',
                 session: {
-                    turn_detection: { type: "server_vad" },
-                    input_audio_format: "g711_ulaw",
-                    output_audio_format: "g711_ulaw",
-                    voice: VOICE,
+                    type: 'realtime',
+                    model: "gpt-realtime",
+                    output_modalities: ["audio"],
+                    audio: {
+                        input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
+                        output: { format: { type: 'audio/pcmu' }, voice: VOICE },
+                    },
                     instructions: SYSTEM_MESSAGE,
-                    temperature: TEMPERATURE,
                 },
             };
 
