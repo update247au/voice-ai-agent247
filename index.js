@@ -21,7 +21,7 @@ fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
 // Constants
-const SYSTEM_MESSAGE = 'You are a helpful and bubbly AI assistant who loves to chat about anything the user is interested about and is prepared to offer them facts. You have a penchant for dad jokes, owl jokes, and rickrolling – subtly. Always stay positive, but work in a joke when appropriate.';
+const SYSTEM_MESSAGE = 'You are the AI Support Specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LIMITATIONS: Do NOT access credentials, make account changes, or provide legal/financial advice. ESCALATION: For account-specific issues, billing, or complex connectivity problems, direct the user to contact Update247 support.';
 const VOICE = 'alloy';
 const TEMPERATURE = 0.8; // Controls the randomness of the AI's responses
 //const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
@@ -59,7 +59,7 @@ fastify.all('/incoming-call', async (request, reply) => {
                           <Response>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede">Please wait while we connect your call to Update 2 4 7 friendly support agent</Say>
                               <Pause length="1"/>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede">O.K., please tell me how can we assit you today in few words</Say>
+                              <Say voice="Google.en-US-Chirp3-HD-Aoede">O.K., please tell me how can we assist you today in few words</Say>
                               <Connect>
                                   <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream" />
                               </Connect>
@@ -119,7 +119,7 @@ fastify.register(async (fastify) => {
                     content: [
                         {
                             type: 'input_text',
-                            text: 'Greet the user with "Hello there! I am an AI voice assistant powered by Twilio and the OpenAI Realtime API. You can ask me for facts, jokes, or anything you can imagine. How can I help you?"'
+                            text: 'Greet the user with "Hello! I am the Update247 AI Support Specialist. I can answer your questions about the Channel Manager, help with troubleshooting, or guide you through our features. How can I help you today?"'
                         }
                     ]
                 }
