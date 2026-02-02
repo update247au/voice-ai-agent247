@@ -43,11 +43,36 @@ const LOG_EVENT_TYPES = [
     'input_audio_buffer.speech_stopped',
     'input_audio_buffer.speech_started',
     'session.created',
-    'session.updated'
+    'session.updated',
+    'response.function_call_arguments.done'
 ];
 
 // Show AI response elapsed timing calculations
 const SHOW_TIMING_MATH = false;
+
+// Tool Definitions
+const TOOLS = [
+    {
+        type: 'function',
+        name: 'query_update247_details',
+        description: 'Get information about Update247 rates, availability, or general platform status. Use this whenever the user asks for specific data about their account or the system.',
+        parameters: {
+            type: 'object',
+            properties: {
+                query_type: {
+                    type: 'string',
+                    enum: ['availability', 'rates', 'connection_status'],
+                    description: 'The type of information to retrieve.'
+                },
+                details: {
+                    type: 'string',
+                    description: 'Specific details about the query (e.g., date range, room type).'
+                }
+            },
+            required: ['query_type']
+        }
+    }
+];
 
 // Root Route
 fastify.get('/', async (request, reply) => {
@@ -101,6 +126,8 @@ fastify.register(async (fastify) => {
                         output: { format: { type: 'audio/pcmu' }, voice: VOICE },
                     },
                     instructions: SYSTEM_MESSAGE,
+                    tools: TOOLS,
+                    tool_choice: 'auto',
                 },
             };
 
@@ -181,7 +208,7 @@ fastify.register(async (fastify) => {
         });
 
         // Listen for messages from the OpenAI WebSocket (and send to Twilio if necessary)
-        openAiWs.on('message', (data) => {
+        openAiWs.on('message', async (data) => {
             try {
                 const response = JSON.parse(data);
 
@@ -212,6 +239,61 @@ fastify.register(async (fastify) => {
 
                 if (response.type === 'input_audio_buffer.speech_started') {
                     handleSpeechStartedEvent();
+                }
+                if (response.type === 'response.function_call_arguments.done') {
+                    console.log('Function call triggered:', response);
+                    const iframe = response.arguments;
+                    const callId = response.call_id;
+                    const functionName = response.name;
+
+                    let functionResult = "I couldn't find that information.";
+
+                    // Handle specific function calls
+                    if (functionName === 'query_update247_details') {
+                        const args = JSON.parse(iframe);
+                        console.log('Executing query_update247_details with args:', args);
+
+                        // Real API Call Logic
+                        try {
+                            const API_BASE_URL = 'https://testserver.update247.com.au/testaj'; // <--- PLEASE UPDATE THIS URL
+                            let url = '';
+
+                            if (args.query_type === 'availability') {
+                                url = `${API_BASE_URL}/mock_availability.php`;
+                            } else if (args.query_type === 'rates') {
+                                url = `${API_BASE_URL}/mock_rates.php`;
+                            } else if (args.query_type === 'booking_details') {
+                                url = `${API_BASE_URL}/mock_booking_details.php`;
+                            } else if (args.query_type === 'connection_status') {
+                                // Fallback mock for connection status if no file exists
+                                functionResult = JSON.stringify({ status: 'success', data: 'All channel connections are active.' });
+                            }
+
+                            if (url) {
+                                console.log(`Fetching data from: ${url}`);
+                                const apiResponse = await fetch(url);
+                                const data = await apiResponse.json();
+                                functionResult = JSON.stringify(data);
+                            }
+                        } catch (err) {
+                            console.error('Error fetching data:', err);
+                            functionResult = "There was an error retrieving the information. Please check the system logs.";
+                        }
+                    }
+
+                    // Send the result back to OpenAI
+                    const functionOutputEvent = {
+                        type: 'conversation.item.create',
+                        item: {
+                            type: 'function_call_output',
+                            call_id: callId,
+                            output: functionResult
+                        }
+                    };
+                    openAiWs.send(JSON.stringify(functionOutputEvent));
+
+                    // Trigger a new response to speak the result
+                    openAiWs.send(JSON.stringify({ type: 'response.create' }));
                 }
             } catch (error) {
                 console.error('Error processing OpenAI message:', error, 'Raw message:', data);
