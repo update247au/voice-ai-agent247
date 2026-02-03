@@ -104,7 +104,11 @@ fastify.all('/incoming-call', async (request, reply) => {
                               <Pause length="1"/>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede"></Say>
                               <Connect>
-                                  <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream" />
+                                  <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream">
+                                      <Parameter name="from" value="{{From}}" />
+                                      <Parameter name="to" value="{{To}}" />
+                                      <Parameter name="callSid" value="{{CallSid}}" />
+                                  </Stream>
                               </Connect>
                           </Response>`;
 
@@ -128,6 +132,19 @@ fastify.register(async (fastify) => {
     let callStartTime = new Date();
     let currentResponseText = '';  // Accumulate text deltas
     let allEvents = [];  // Capture ALL events for debugging
+
+        // Try to parse caller info from the WebSocket URL query params (e.g. TwiML can embed ?from={{From}})
+        try {
+            const rawUrl = req && req.url ? String(req.url) : '';
+            const parsed = new URL(rawUrl, 'http://localhost');
+            const qFrom = parsed.searchParams.get('from') || parsed.searchParams.get('From') || parsed.searchParams.get('caller') || parsed.searchParams.get('Caller');
+            const qCallSid = parsed.searchParams.get('callSid') || parsed.searchParams.get('CallSid') || parsed.searchParams.get('callsid');
+            if (qFrom) callerNumber = qFrom;
+            if (qCallSid) callSid = qCallSid;
+            if (qFrom || qCallSid) console.log('Parsed caller info from WS URL:', callerNumber, callSid);
+        } catch (err) {
+            // ignore parse errors
+        }
 
         const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`, {
             headers: {
