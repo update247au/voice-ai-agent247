@@ -125,6 +125,7 @@ fastify.register(async (fastify) => {
     let conversationLog = [];
     let callStartTime = new Date();
     let currentResponseText = '';  // Accumulate text deltas
+    let allEvents = [];  // Capture ALL events for debugging
 
         const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`, {
             headers: {
@@ -228,6 +229,13 @@ fastify.register(async (fastify) => {
         openAiWs.on('message', async (data) => {
             try {
                 const response = JSON.parse(data);
+
+                // Capture ALL events for debugging
+                allEvents.push({
+                    type: response.type,
+                    keys: Object.keys(response),
+                    timestamp: new Date().toISOString()
+                });
 
                 // Log ALL event types to understand what's being received
                 console.log(`[ALL_EVENTS] Type: ${response.type}`);
@@ -385,7 +393,11 @@ fastify.register(async (fastify) => {
                     role: 'note',
                     content: 'No conversation items captured during this call. Check conversation event structure.',
                     timestamp: new Date().toISOString()
-                }]
+                }],
+                _debug: {
+                    totalEventsReceived: allEvents.length,
+                    eventTypes: allEvents.slice(0, 50)  // First 50 events for debugging
+                }
             };
 
             const payload = JSON.stringify(transcript, null, 2);
