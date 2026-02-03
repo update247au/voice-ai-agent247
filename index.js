@@ -211,6 +211,7 @@ fastify.register(async (fastify) => {
                                 // Track conversation items
                                 if (response.type === 'conversation.item.created') {
                                     const item = response.item;
+                                    if (SHOW_TIMING_MATH) console.log('conversation.item.created:', JSON.stringify(item));
                                     if (item && item.role === 'user' && item.content) {
                                         const textContent = item.content.find(c => c.type === 'input_text');
                                         if (textContent) {
@@ -219,6 +220,7 @@ fastify.register(async (fastify) => {
                                                 content: textContent.text,
                                                 timestamp: new Date().toISOString()
                                             });
+                                            console.log(`[Transcript] User: ${textContent.text}`);
                                         }
                                     }
                                     if (item && item.role === 'assistant' && item.content) {
@@ -229,6 +231,7 @@ fastify.register(async (fastify) => {
                                                 content: textContent.text,
                                                 timestamp: new Date().toISOString()
                                             });
+                                            console.log(`[Transcript] Assistant: ${textContent.text}`);
                                         }
                                     }
                                 }
@@ -305,8 +308,9 @@ fastify.register(async (fastify) => {
 
         // Save conversation transcript (upload to GCS if configured, otherwise local file)
         const saveTranscript = async () => {
+            console.log(`[saveTranscript] Called. conversationLog length: ${conversationLog.length}, GCS_BUCKET: ${GCS_BUCKET}`);
             if (conversationLog.length === 0) {
-                console.log('No conversation to save');
+                console.log('[saveTranscript] No conversation to save');
                 return;
             }
 
@@ -329,10 +333,10 @@ fastify.register(async (fastify) => {
                 try {
                     const file = storage.bucket(GCS_BUCKET).file(filename);
                     await file.save(payload, { contentType: 'application/json' });
-                    console.log(`Transcript uploaded to gs://${GCS_BUCKET}/${filename}`);
+                    console.log(`[saveTranscript] ✓ Transcript uploaded to gs://${GCS_BUCKET}/${filename}`);
                     return;
                 } catch (err) {
-                    console.error('Failed to upload transcript to GCS, falling back to local file:', err);
+                    console.error(`[saveTranscript] ✗ Failed to upload to GCS: ${err.message}`, err);
                 }
             }
 
@@ -340,16 +344,17 @@ fastify.register(async (fastify) => {
             try {
                 const filepath = path.join(CALL_HISTORY_DIR, filename);
                 fs.writeFileSync(filepath, payload);
-                console.log(`Transcript saved to ${filepath}`);
+                console.log(`[saveTranscript] ✓ Transcript saved locally: ${filepath}`);
             } catch (err) {
-                console.error('Failed to save transcript to local file:', err);
+                console.error(`[saveTranscript] ✗ Failed to save locally: ${err.message}`, err);
             }
         };
 
         // Handle connection close: save transcript and close OpenAI connection
         connection.on('close', () => {
+            console.log('[connection.close] Handler fired. Saving transcript and closing OpenAI connection.');
             if (openAiWs.readyState === WebSocket.OPEN) openAiWs.close();
-            saveTranscript().catch((err) => console.error('Error saving transcript:', err));
+            saveTranscript().catch((err) => console.error('[connection.close] Error saving transcript:', err));
             console.log('Client disconnected.');
         });
 
