@@ -315,41 +315,44 @@ fastify.register(async (fastify) => {
                     callerAudioChunks.map(b64 => Buffer.from(b64, 'base64'))
                 );
                 
-                // Create WAV file with µ-law encoding for Whisper API
-                // WAV header for µ-law (PCMU) audio: 8000 Hz, 1 channel, 8-bit
-                const createWavHeader = (dataLength) => {
-                    const header = Buffer.alloc(58); // WAV header size for µ-law
-                    
-                    // RIFF chunk descriptor
+                // Decode µ-law (PCMU) to 16-bit PCM and wrap in a standard WAV file
+                const muLawDecode = (uVal) => {
+                    uVal = ~uVal & 0xff;
+                    let t = ((uVal & 0x0f) << 3) + 0x84;
+                    t <<= (uVal & 0x70) >> 4;
+                    return (uVal & 0x80) ? (0x84 - t) : (t - 0x84);
+                };
+
+                const pcm16Buffer = Buffer.alloc(pcmuBuffer.length * 2);
+                for (let i = 0; i < pcmuBuffer.length; i += 1) {
+                    const sample = muLawDecode(pcmuBuffer[i]);
+                    pcm16Buffer.writeInt16LE(sample, i * 2);
+                }
+
+                const createPcmWavHeader = (dataLength, sampleRate = 8000, numChannels = 1, bitsPerSample = 16) => {
+                    const blockAlign = (numChannels * bitsPerSample) / 8;
+                    const byteRate = sampleRate * blockAlign;
+                    const header = Buffer.alloc(44);
+
                     header.write('RIFF', 0);
-                    header.writeUInt32LE(dataLength + 50, 4); // File size - 8
+                    header.writeUInt32LE(36 + dataLength, 4);
                     header.write('WAVE', 8);
-                    
-                    // fmt sub-chunk
                     header.write('fmt ', 12);
-                    header.writeUInt32LE(18, 16); // Subchunk1Size (18 for µ-law)
-                    header.writeUInt16LE(7, 20); // AudioFormat (7 = µ-law)
-                    header.writeUInt16LE(1, 22); // NumChannels (1 = mono)
-                    header.writeUInt32LE(8000, 24); // SampleRate (8000 Hz)
-                    header.writeUInt32LE(8000, 28); // ByteRate (8000 bytes/sec for 8kHz µ-law)
-                    header.writeUInt16LE(1, 32); // BlockAlign (1 byte)
-                    header.writeUInt16LE(8, 34); // BitsPerSample (8 bits)
-                    header.writeUInt16LE(0, 36); // ExtraParamSize
-                    
-                    // fact chunk (required for compressed formats)
-                    header.write('fact', 38);
-                    header.writeUInt32LE(4, 42);
-                    header.writeUInt32LE(dataLength, 46);
-                    
-                    // data sub-chunk
-                    header.write('data', 50);
-                    header.writeUInt32LE(dataLength, 54);
-                    
+                    header.writeUInt32LE(16, 16); // PCM
+                    header.writeUInt16LE(1, 20); // AudioFormat = PCM
+                    header.writeUInt16LE(numChannels, 22);
+                    header.writeUInt32LE(sampleRate, 24);
+                    header.writeUInt32LE(byteRate, 28);
+                    header.writeUInt16LE(blockAlign, 32);
+                    header.writeUInt16LE(bitsPerSample, 34);
+                    header.write('data', 36);
+                    header.writeUInt32LE(dataLength, 40);
+
                     return header;
                 };
-                
-                const wavHeader = createWavHeader(pcmuBuffer.length);
-                const wavBuffer = Buffer.concat([wavHeader, pcmuBuffer]);
+
+                const wavHeader = createPcmWavHeader(pcm16Buffer.length);
+                const wavBuffer = Buffer.concat([wavHeader, pcm16Buffer]);
                 
                 // Create form data for Whisper API
                 const form = new FormData();
@@ -362,7 +365,8 @@ fastify.register(async (fastify) => {
                 const response = await fetch(whisperUrl, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                        ...form.getHeaders()
                     },
                     body: form
                 });
