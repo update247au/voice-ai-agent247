@@ -366,11 +366,7 @@ fastify.register(async (fastify) => {
         // Save conversation transcript (upload to GCS if configured, otherwise local file)
         const saveTranscript = async () => {
             console.log(`[saveTranscript] Called. conversationLog length: ${conversationLog.length}, GCS_BUCKET: ${GCS_BUCKET}`);
-            if (conversationLog.length === 0) {
-                console.log('[saveTranscript] No conversation to save');
-                return;
-            }
-
+            
             const callEndTime = new Date();
             const duration = Math.round((callEndTime - callStartTime) / 1000); // Duration in seconds
             const timestamp = callStartTime.toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -381,7 +377,11 @@ fastify.register(async (fastify) => {
                 startTime: callStartTime.toISOString(),
                 endTime: callEndTime.toISOString(),
                 duration: duration,
-                conversation: conversationLog
+                conversation: conversationLog.length > 0 ? conversationLog : [{
+                    role: 'note',
+                    content: 'No conversation items captured during this call. Check conversation event structure.',
+                    timestamp: new Date().toISOString()
+                }]
             };
 
             const payload = JSON.stringify(transcript, null, 2);
