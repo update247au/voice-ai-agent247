@@ -6,6 +6,7 @@ import fastifyWs from '@fastify/websocket';
 import fs from 'fs';
 import path from 'path';
 import { Storage } from '@google-cloud/storage';
+import FormData from 'form-data';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -317,7 +318,6 @@ fastify.register(async (fastify) => {
                 );
                 
                 // Create form data for Whisper API
-                const FormData = require('form-data');
                 const form = new FormData();
                 form.append('model', 'whisper-1');
                 form.append('file', pcmuBuffer, { filename: 'audio.pcm', contentType: 'audio/pcm' });
