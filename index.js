@@ -508,11 +508,17 @@ fastify.register(async (fastify) => {
 
 
                 if (response.type === 'response.output_audio.delta' && response.delta) {
+                    // Debug: log first 30 chars of OpenAI audio delta and Twilio payload
+                    const delta = response.delta;
+                    console.log("OpenAI audio delta (first 30):", delta.slice(0, 30));
                     const audioDelta = {
                         event: 'media',
                         streamSid: streamSid,
-                        media: { payload: response.delta }
+                        media: { payload: delta }
                     };
+                    const payload = audioDelta.media.payload;
+                    console.log("Sending to Twilio (first 30):", payload.slice(0, 30));
+
                     connection.send(JSON.stringify(audioDelta));
 
                     // First delta from a new response starts the elapsed time counter
