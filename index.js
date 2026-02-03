@@ -125,6 +125,8 @@ fastify.all('/incoming-call', async (request, reply) => {
         const callSidEsc = encodeURIComponent(callSid || '');
 
         const streamUrl = `wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream?from=${fromEsc}&to=${toEsc}&callSid=${callSidEsc}`;
+        // Escape ampersands for safe XML embedding (Twilio's XML parser requires &amp;)
+        const streamUrlXml = streamUrl.replace(/&/g, '&amp;');
 
         const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
@@ -132,7 +134,7 @@ fastify.all('/incoming-call', async (request, reply) => {
                               <Pause length="1"/>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede"></Say>
                               <Connect>
-                                  <Stream url="${streamUrl}">
+                                  <Stream url="${streamUrlXml}">
                                       <Parameter name="from" value="${from}" />
                                       <Parameter name="to" value="${to}" />
                                       <Parameter name="callSid" value="${callSid}" />
