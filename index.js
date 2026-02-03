@@ -5,6 +5,7 @@ import fastifyFormBody from '@fastify/formbody';
 import fastifyWs from '@fastify/websocket';
 import fs from 'fs';
 import path from 'path';
+import { Storage } from '@google-cloud/storage';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -16,6 +17,16 @@ if (!fs.existsSync(CALL_HISTORY_DIR)) {
     fs.mkdirSync(CALL_HISTORY_DIR, { recursive: true });
 }
 const { OPENAI_API_KEY } = process.env;
+// Optional: GCS bucket name for transcript persistence. If not set, falls back to local files.
+const GCS_BUCKET = process.env.GCS_BUCKET || process.env.GOOGLE_CLOUD_BUCKET || null;
+
+let storage = null;
+if (GCS_BUCKET) {
+    storage = new Storage();
+    console.log(`GCS enabled. Uploading transcripts to bucket: ${GCS_BUCKET}`);
+} else {
+    console.log('GCS_BUCKET not set — transcripts will be saved to local call-history folder');
+}
 
 if (!OPENAI_API_KEY) {
     console.error('Missing OpenAI API key. Please set it in the .env file.');
@@ -292,9 +303,53 @@ fastify.register(async (fastify) => {
             }
         });
 
-        // Handle connection close
+        // Save conversation transcript (upload to GCS if configured, otherwise local file)
+        const saveTranscript = async () => {
+            if (conversationLog.length === 0) {
+                console.log('No conversation to save');
+                return;
+            }
+
+            const callEndTime = new Date();
+            const duration = Math.round((callEndTime - callStartTime) / 1000); // Duration in seconds
+            const timestamp = callStartTime.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `call-${streamSid || 'unknown'}-${timestamp}.json`;
+
+            const transcript = {
+                callId: streamSid,
+                startTime: callStartTime.toISOString(),
+                endTime: callEndTime.toISOString(),
+                duration: duration,
+                conversation: conversationLog
+            };
+
+            const payload = JSON.stringify(transcript, null, 2);
+
+            if (storage && GCS_BUCKET) {
+                try {
+                    const file = storage.bucket(GCS_BUCKET).file(filename);
+                    await file.save(payload, { contentType: 'application/json' });
+                    console.log(`Transcript uploaded to gs://${GCS_BUCKET}/${filename}`);
+                    return;
+                } catch (err) {
+                    console.error('Failed to upload transcript to GCS, falling back to local file:', err);
+                }
+            }
+
+            // Fallback to local file
+            try {
+                const filepath = path.join(CALL_HISTORY_DIR, filename);
+                fs.writeFileSync(filepath, payload);
+                console.log(`Transcript saved to ${filepath}`);
+            } catch (err) {
+                console.error('Failed to save transcript to local file:', err);
+            }
+        };
+
+        // Handle connection close: save transcript and close OpenAI connection
         connection.on('close', () => {
             if (openAiWs.readyState === WebSocket.OPEN) openAiWs.close();
+            saveTranscript().catch((err) => console.error('Error saving transcript:', err));
             console.log('Client disconnected.');
         });
 
@@ -317,33 +372,3 @@ fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
     }
     console.log(`Server is listening on port ${PORT}`);
 });
-
-        // Save conversation transcript to JSON file
-        const saveTranscript = () => {
-            if (conversationLog.length === 0) {
-                console.log('No conversation to save');
-                return;
-            }
-
-            const callEndTime = new Date();
-            const duration = Math.round((callEndTime - callStartTime) / 1000); // Duration in seconds
-            const timestamp = callStartTime.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const filename = `call-${streamSid || 'unknown'}-${timestamp}.json`;
-            const filepath = path.join(CALL_HISTORY_DIR, filename);
-
-            const transcript = {
-                callId: streamSid,
-                startTime: callStartTime.toISOString(),
-                endTime: callEndTime.toISOString(),
-                duration: duration,
-                conversation: conversationLog
-            };
-
-            fs.writeFileSync(filepath, JSON.stringify(transcript, null, 2));
-            console.log(`Transcript saved to ${filepath}`);
-        };
-
-        // Save transcript before fully closing
-        connection.on('close', () => {
-            saveTranscript();
-        });
