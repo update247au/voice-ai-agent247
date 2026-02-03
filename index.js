@@ -223,12 +223,12 @@ fastify.register(async (fastify) => {
                     type: 'realtime',
                     model: "gpt-realtime",
                     output_modalities: ["audio"],
-                    audio: {
-                        input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
-                        output: { format: { type: 'audio/pcmu' }, voice: VOICE },
-                    },
-                    instructions: SYSTEM_MESSAGE,
-                    ...(USE_REALTIME_TRANSCRIPTION ? { input_audio_transcription: { model: 'gpt-4o-transcribe' } } : {}),
+                    voice: VOICE,
+                    input_audio_format: "g711_ulaw",
+                    output_audio_format: "g711_ulaw",
+                    input_audio_transcription: { model: 'gpt-4o-transcribe' },
+                    turn_detection: { type: "server_vad" },
+                    instructions: SYSTEM_MESSAGE
                 },
             };
 
