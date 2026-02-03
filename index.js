@@ -98,6 +98,10 @@ fastify.get('/', async (request, reply) => {
 // Route for Twilio to handle incoming calls
 // <Say> punctuation to improve text-to-speech translation
 fastify.all('/incoming-call', async (request, reply) => {
+    const from = request.body.From || '';
+    const to = request.body.To || '';
+    const callSid = request.body.CallSid || '';
+
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede">Connecting your call to Update 2 4 7</Say>
@@ -105,9 +109,9 @@ fastify.all('/incoming-call', async (request, reply) => {
                               <Say voice="Google.en-US-Chirp3-HD-Aoede"></Say>
                               <Connect>
                                   <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream">
-                                      <Parameter name="from" value="{{From}}" />
-                                      <Parameter name="to" value="{{To}}" />
-                                      <Parameter name="callSid" value="{{CallSid}}" />
+                                      <Parameter name="from" value="${from}" />
+                                      <Parameter name="to" value="${to}" />
+                                      <Parameter name="callSid" value="${callSid}" />
                                   </Stream>
                               </Connect>
                           </Response>`;
