@@ -310,17 +310,51 @@ fastify.register(async (fastify) => {
             try {
                 console.log('[Whisper] Transcribing', callerAudioChunks.length, 'audio chunks');
                 
-                // Combine all base64 chunks and convert to WAV format for Whisper
-                // Whisper accepts WAV, MP3, FLAC, or OGG; we'll send PCMU (µ-law) audio as is
-                // Convert all PCMU chunks to a single buffer
+                // Combine all base64 chunks into PCMU buffer
                 const pcmuBuffer = Buffer.concat(
                     callerAudioChunks.map(b64 => Buffer.from(b64, 'base64'))
                 );
                 
+                // Create WAV file with µ-law encoding for Whisper API
+                // WAV header for µ-law (PCMU) audio: 8000 Hz, 1 channel, 8-bit
+                const createWavHeader = (dataLength) => {
+                    const header = Buffer.alloc(58); // WAV header size for µ-law
+                    
+                    // RIFF chunk descriptor
+                    header.write('RIFF', 0);
+                    header.writeUInt32LE(dataLength + 50, 4); // File size - 8
+                    header.write('WAVE', 8);
+                    
+                    // fmt sub-chunk
+                    header.write('fmt ', 12);
+                    header.writeUInt32LE(18, 16); // Subchunk1Size (18 for µ-law)
+                    header.writeUInt16LE(7, 20); // AudioFormat (7 = µ-law)
+                    header.writeUInt16LE(1, 22); // NumChannels (1 = mono)
+                    header.writeUInt32LE(8000, 24); // SampleRate (8000 Hz)
+                    header.writeUInt32LE(8000, 28); // ByteRate (8000 bytes/sec for 8kHz µ-law)
+                    header.writeUInt16LE(1, 32); // BlockAlign (1 byte)
+                    header.writeUInt16LE(8, 34); // BitsPerSample (8 bits)
+                    header.writeUInt16LE(0, 36); // ExtraParamSize
+                    
+                    // fact chunk (required for compressed formats)
+                    header.write('fact', 38);
+                    header.writeUInt32LE(4, 42);
+                    header.writeUInt32LE(dataLength, 46);
+                    
+                    // data sub-chunk
+                    header.write('data', 50);
+                    header.writeUInt32LE(dataLength, 54);
+                    
+                    return header;
+                };
+                
+                const wavHeader = createWavHeader(pcmuBuffer.length);
+                const wavBuffer = Buffer.concat([wavHeader, pcmuBuffer]);
+                
                 // Create form data for Whisper API
                 const form = new FormData();
                 form.append('model', 'whisper-1');
-                form.append('file', pcmuBuffer, { filename: 'audio.pcm', contentType: 'audio/pcm' });
+                form.append('file', wavBuffer, { filename: 'audio.wav', contentType: 'audio/wav' });
                 form.append('language', 'en');
                 
                 // Call OpenAI Whisper API
