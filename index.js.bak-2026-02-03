@@ -72,6 +72,7 @@ const PORT = Number(process.env.PORT) || 8080;
 
 
 
+
 // List of Event Types to log to the console. See the OpenAI Realtime API Documentation: https://platform.openai.com/docs/api-reference/realtime
 const LOG_EVENT_TYPES = [
     'error',
@@ -122,8 +123,6 @@ fastify.register(async (fastify) => {
         let lastAssistantItem = null;
         let markQueue = [];
         let responseStartTimestampTwilio = null;
-        let callerNumber = null; // Caller phone number (if provided by Twilio)
-        let callSid = null; // Twilio call SID (if provided)
     let conversationLog = [];
     let callStartTime = new Date();
     let currentResponseText = '';  // Accumulate text deltas
@@ -349,10 +348,7 @@ fastify.register(async (fastify) => {
                         break;
                     case 'start':
                         streamSid = data.start.streamSid;
-                        // Try to capture caller phone number and call SID if Twilio provides them
-                        callSid = data.start.callSid || data.start.CallSid || null;
-                        callerNumber = data.start.from || data.start.From || (data.start.participant && (data.start.participant.from || data.start.participant.From)) || data.start.caller || null;
-                        console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callSid:', callSid);
+                        console.log('Incoming stream has started', streamSid);
 
                         // Reset start and media timestamp on a new stream
                         responseStartTimestampTwilio = null;
@@ -388,8 +384,6 @@ fastify.register(async (fastify) => {
 
             const transcript = {
                 callId: streamSid,
-                callSid: callSid,
-                callerNumber: callerNumber,
                 startTime: callStartTime.toISOString(),
                 endTime: callEndTime.toISOString(),
                 duration: duration,
