@@ -3,11 +3,18 @@ import WebSocket from 'ws';
 import dotenv from 'dotenv';
 import fastifyFormBody from '@fastify/formbody';
 import fastifyWs from '@fastify/websocket';
+import fs from 'fs';
+import path from 'path';
 
 // Load environment variables from .env file
 dotenv.config();
 
 // Retrieve the OpenAI API key from environment variables
+// Ensure call-history directory exists
+const CALL_HISTORY_DIR = path.join(process.cwd(), 'call-history');
+if (!fs.existsSync(CALL_HISTORY_DIR)) {
+    fs.mkdirSync(CALL_HISTORY_DIR, { recursive: true });
+}
 const { OPENAI_API_KEY } = process.env;
 
 if (!OPENAI_API_KEY) {
@@ -81,6 +88,8 @@ fastify.register(async (fastify) => {
         let lastAssistantItem = null;
         let markQueue = [];
         let responseStartTimestampTwilio = null;
+    let conversationLog = [];
+    let callStartTime = new Date();
 
         const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`, {
             headers: {
@@ -187,6 +196,31 @@ fastify.register(async (fastify) => {
 
                 if (LOG_EVENT_TYPES.includes(response.type)) {
                     console.log(`Received event: ${response.type}`, response);
+
+                                // Track conversation items
+                                if (response.type === 'conversation.item.created') {
+                                    const item = response.item;
+                                    if (item && item.role === 'user' && item.content) {
+                                        const textContent = item.content.find(c => c.type === 'input_text');
+                                        if (textContent) {
+                                            conversationLog.push({
+                                                role: 'user',
+                                                content: textContent.text,
+                                                timestamp: new Date().toISOString()
+                                            });
+                                        }
+                                    }
+                                    if (item && item.role === 'assistant' && item.content) {
+                                        const textContent = item.content.find(c => c.type === 'text');
+                                        if (textContent) {
+                                            conversationLog.push({
+                                                role: 'assistant',
+                                                content: textContent.text,
+                                                timestamp: new Date().toISOString()
+                                            });
+                                        }
+                                    }
+                                }
                 }
 
                 if (response.type === 'response.output_audio.delta' && response.delta) {
@@ -283,3 +317,33 @@ fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
     }
     console.log(`Server is listening on port ${PORT}`);
 });
+
+        // Save conversation transcript to JSON file
+        const saveTranscript = () => {
+            if (conversationLog.length === 0) {
+                console.log('No conversation to save');
+                return;
+            }
+
+            const callEndTime = new Date();
+            const duration = Math.round((callEndTime - callStartTime) / 1000); // Duration in seconds
+            const timestamp = callStartTime.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `call-${streamSid || 'unknown'}-${timestamp}.json`;
+            const filepath = path.join(CALL_HISTORY_DIR, filename);
+
+            const transcript = {
+                callId: streamSid,
+                startTime: callStartTime.toISOString(),
+                endTime: callEndTime.toISOString(),
+                duration: duration,
+                conversation: conversationLog
+            };
+
+            fs.writeFileSync(filepath, JSON.stringify(transcript, null, 2));
+            console.log(`Transcript saved to ${filepath}`);
+        };
+
+        // Save transcript before fully closing
+        connection.on('close', () => {
+            saveTranscript();
+        });
