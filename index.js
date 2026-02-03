@@ -98,9 +98,13 @@ fastify.get('/', async (request, reply) => {
 // Route for Twilio to handle incoming calls
 // <Say> punctuation to improve text-to-speech translation
 fastify.all('/incoming-call', async (request, reply) => {
+    console.log('[DEBUG] /incoming-call received. request.body:', JSON.stringify(request.body));
+    
     const from = request.body.From || '';
     const to = request.body.To || '';
     const callSid = request.body.CallSid || '';
+
+    console.log('[DEBUG] Extracted from webhook - from:', from, 'to:', to, 'callSid:', callSid);
 
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
@@ -141,14 +145,17 @@ fastify.register(async (fastify) => {
         // Try to parse caller info from the WebSocket URL query params (e.g. TwiML can embed ?from={{From}})
         try {
             const rawUrl = req && req.url ? String(req.url) : '';
+            console.log('[DEBUG] WebSocket URL:', rawUrl);
             const parsed = new URL(rawUrl, 'http://localhost');
             const qFrom = parsed.searchParams.get('from') || parsed.searchParams.get('From') || parsed.searchParams.get('caller') || parsed.searchParams.get('Caller');
+            const qTo = parsed.searchParams.get('to') || parsed.searchParams.get('To');
             const qCallSid = parsed.searchParams.get('callSid') || parsed.searchParams.get('CallSid') || parsed.searchParams.get('callsid');
             if (qFrom) callerNumber = qFrom;
+            if (qTo) calleeNumber = qTo;
             if (qCallSid) callSid = qCallSid;
-            if (qFrom || qCallSid) console.log('Parsed caller info from WS URL:', callerNumber, callSid);
+            if (qFrom || qTo || qCallSid) console.log('[DEBUG] Parsed from WS URL - from:', qFrom, 'to:', qTo, 'callSid:', qCallSid);
         } catch (err) {
-            // ignore parse errors
+            console.error('[DEBUG] Error parsing WS URL:', err.message);
         }
 
         const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`, {
@@ -371,6 +378,11 @@ fastify.register(async (fastify) => {
                         break;
                     case 'start':
                         streamSid = data.start.streamSid;
+                        
+                        // Log the full start object to see what Twilio sends
+                        console.log('[DEBUG] Full start object keys:', Object.keys(data.start));
+                        console.log('[DEBUG] data.start:', JSON.stringify(data.start, null, 2).substring(0, 500));
+                        
                         // Try to capture caller phone number and call SID from common places
                         callSid = data.start.callSid || data.start.CallSid || callSid || null;
                         callerNumber = data.start.from || data.start.From || data.start.caller || callerNumber || null;
@@ -401,6 +413,8 @@ fastify.register(async (fastify) => {
                                         if (keyLC === 'callsid') callSid = v;
                                     });
                                 }
+                            } else {
+                                console.log('[DEBUG] No parameters found in start event');
                             }
                         } catch (e) {
                             console.error('[DEBUG] Error parsing parameters:', e.message);
