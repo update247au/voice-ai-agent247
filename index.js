@@ -173,6 +173,10 @@ fastify.register(async (fastify) => {
     let callStartTime = new Date();
     let currentResponseText = '';  // Accumulate text deltas
     let allEvents = [];  // Capture ALL events for debugging
+    
+    // For caller speech transcription via Whisper API
+    let isCapturingCallerSpeech = false;
+    let callerAudioChunks = [];  // Buffer audio base64 chunks during speech
 
         // Try to parse caller info from the WebSocket URL query params (e.g. TwiML can embed ?from={{From}})
         try {
@@ -295,6 +299,67 @@ fastify.register(async (fastify) => {
             }
         };
 
+        // Transcribe caller audio using OpenAI Whisper API
+        const transcribeCallerAudio = async () => {
+            if (callerAudioChunks.length === 0) {
+                console.log('[Whisper] No audio chunks to transcribe');
+                return;
+            }
+            
+            try {
+                console.log('[Whisper] Transcribing', callerAudioChunks.length, 'audio chunks');
+                
+                // Combine all base64 chunks and convert to WAV format for Whisper
+                // Whisper accepts WAV, MP3, FLAC, or OGG; we'll send PCMU (µ-law) audio as is
+                // Convert all PCMU chunks to a single buffer
+                const pcmuBuffer = Buffer.concat(
+                    callerAudioChunks.map(b64 => Buffer.from(b64, 'base64'))
+                );
+                
+                // Create form data for Whisper API
+                const FormData = require('form-data');
+                const form = new FormData();
+                form.append('model', 'whisper-1');
+                form.append('file', pcmuBuffer, { filename: 'audio.pcm', contentType: 'audio/pcm' });
+                form.append('language', 'en');
+                
+                // Call OpenAI Whisper API
+                const whisperUrl = 'https://api.openai.com/v1/audio/transcriptions';
+                const response = await fetch(whisperUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: form
+                });
+                
+                if (!response.ok) {
+                    const errBody = await response.text();
+                    console.error('[Whisper] API error:', response.status, errBody);
+                    return;
+                }
+                
+                const result = await response.json();
+                const transcribedText = result.text || '';
+                
+                if (transcribedText.trim()) {
+                    console.log(`[Whisper] Transcribed caller speech: "${transcribedText}"`);
+                    conversationLog.push({
+                        role: 'user',
+                        content: transcribedText,
+                        timestamp: new Date().toISOString()
+                    });
+                    console.log(`[Transcript] User: ${transcribedText}`);
+                } else {
+                    console.log('[Whisper] Empty transcription result');
+                }
+            } catch (error) {
+                console.error('[Whisper] Transcription failed:', error && error.message ? error.message : error);
+            } finally {
+                callerAudioChunks = [];  // Clear buffer after transcription
+            }
+        };
+
         // Open event for OpenAI WebSocket
         openAiWs.on('open', () => {
             console.log('Connected to the OpenAI Realtime API');
@@ -318,6 +383,13 @@ fastify.register(async (fastify) => {
 
                 if (LOG_EVENT_TYPES.includes(response.type)) {
                     console.log(`Received event: ${response.type}`, response);
+                }
+
+                // Detect when caller speech starts (from OpenAI Realtime API)
+                if (response.type === 'input_audio_buffer.speech_started') {
+                    isCapturingCallerSpeech = true;
+                    callerAudioChunks = [];
+                    console.log('[Whisper] Caller speech detected. Starting audio capture...');
                 }
 
                 // Capture conversation items from conversation.item.added events
@@ -389,6 +461,13 @@ fastify.register(async (fastify) => {
 
                 if (response.type === 'input_audio_buffer.speech_stopped') {
                     handleSpeechStartedEvent();
+                    
+                    // Caller speech has stopped; transcribe the buffered audio
+                    if (isCapturingCallerSpeech) {
+                        isCapturingCallerSpeech = false;
+                        console.log('[Whisper] Speech stopped. Transcribing buffered audio...');
+                        transcribeCallerAudio().catch(err => console.error('[Whisper] Transcription error:', err));
+                    }
                 }
 
                 // When user's speech is committed, request OpenAI to create a conversation item from it
@@ -414,6 +493,12 @@ fastify.register(async (fastify) => {
                     case 'media':
                         latestMediaTimestamp = data.media.timestamp;
                         if (SHOW_TIMING_MATH) console.log(`Received media message with timestamp: ${latestMediaTimestamp}ms`);
+                        
+                        // If caller speech is being detected, buffer this audio chunk for later transcription
+                        if (isCapturingCallerSpeech && data.media.payload) {
+                            callerAudioChunks.push(data.media.payload);
+                        }
+                        
                         // Debug: inspect and save incoming audio payloads to help diagnose scrambled audio
                         try {
                             const payloadB64 = data.media.payload || '';
