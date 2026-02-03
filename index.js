@@ -24,6 +24,28 @@ let storage = null;
 if (GCS_BUCKET) {
     storage = new Storage();
     console.log(`GCS enabled. Uploading transcripts to bucket: ${GCS_BUCKET}`);
+    
+    // Test GCS connectivity on startup
+    const testGCSConnectivity = async () => {
+        try {
+            const testFilename = `test-${Date.now()}.json`;
+            const testFile = storage.bucket(GCS_BUCKET).file(testFilename);
+            const testPayload = JSON.stringify({
+                test: true,
+                timestamp: new Date().toISOString(),
+                message: 'GCS connectivity test'
+            }, null, 2);
+            
+            await testFile.save(testPayload, { contentType: 'application/json' });
+            console.log(`✓ GCS test successful: gs://${GCS_BUCKET}/${testFilename}`);
+        } catch (err) {
+            console.error(`✗ GCS test failed: ${err.message}`);
+            console.error('   Make sure: 1) bucket exists, 2) service account has objectCreator role, 3) credentials are set');
+        }
+    };
+    
+    // Run test after short delay
+    setTimeout(testGCSConnectivity, 500);
 } else {
     console.log('GCS_BUCKET not set — transcripts will be saved to local call-history folder');
 }
