@@ -21,7 +21,7 @@ fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
 // Constants
-const SYSTEM_MESSAGE = 'You are the Support and sales specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support and sales staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only. ';
+const SYSTEM_MESSAGE = 'You are the AI Support Specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only. LIMITATIONS: Do NOT access credentials, make account changes, or provide legal/financial advice. ESCALATION: For account-specific issues, billing, or complex connectivity problems, direct the user to contact Update247 support.';
 const VOICE = 'alloy';
 
 const TEMPERATURE = 0.4; // Controls the randomness of the AI's responsess
@@ -61,7 +61,7 @@ fastify.all('/incoming-call', async (request, reply) => {
                           <Response>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede">Connecting your call to Update 2 4 7</Say>
                               <Pause length="1"/>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede"></Say>
+                              <Say voice="Google.en-US-Chirp3-HD-Aoede">How can we assist you today ?</Say>
                               <Connect>
                                   <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream" />
                               </Connect>
@@ -121,7 +121,7 @@ fastify.register(async (fastify) => {
                     content: [
                         {
                             type: 'input_text',
-                            text: 'Greet the user with : Update247 you are speaking with RAJ. How are you doing today?'
+                            text: 'Greet the user with "Hello! I am the Update247 AI Support Specialist. I can answer your questions about the Channel Manager, help with troubleshooting, or guide you through our features. How can I help you today?"'
                         }
                     ]
                 }
