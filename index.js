@@ -228,6 +228,9 @@ fastify.register(async (fastify) => {
             try {
                 const response = JSON.parse(data);
 
+                // Log ALL event types to understand what's being received
+                console.log(`[ALL_EVENTS] Type: ${response.type}`);
+
                 if (LOG_EVENT_TYPES.includes(response.type)) {
                     console.log(`Received event: ${response.type}`, response);
                 }
@@ -270,6 +273,20 @@ fastify.register(async (fastify) => {
                             timestamp: new Date().toISOString()
                         });
                         console.log(`[Transcript] Assistant (from transcript.done): ${response.transcript}`);
+                    }
+                }
+
+                // Also capture from response.text_delta (another possible event)
+                if (response.type === 'response.text.delta') {
+                    console.log(`[DEBUG] response.text.delta:`, response.delta);
+                    if (response.delta && response.delta.trim()) {
+                        // Accumulate text deltas
+                        conversationLog.push({
+                            role: 'assistant',
+                            content: response.delta,
+                            timestamp: new Date().toISOString()
+                        });
+                        console.log(`[Transcript] Assistant (from text.delta): ${response.delta}`);
                     }
                 }
 
