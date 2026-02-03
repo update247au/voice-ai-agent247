@@ -366,9 +366,34 @@ fastify.register(async (fastify) => {
                         break;
                     case 'start':
                         streamSid = data.start.streamSid;
-                        // Try to capture caller phone number and call SID if Twilio provides them
-                        callSid = data.start.callSid || data.start.CallSid || null;
-                        callerNumber = data.start.from || data.start.From || (data.start.participant && (data.start.participant.from || data.start.participant.From)) || data.start.caller || null;
+                        // Try to capture caller phone number and call SID from common places
+                        callSid = data.start.callSid || data.start.CallSid || callSid || null;
+                        callerNumber = data.start.from || data.start.From || data.start.caller || callerNumber || null;
+
+                        // Twilio sends <Parameter> values in the start event as an array under start.parameters
+                        try {
+                            const params = data.start.parameters || (data.start.stream && data.start.stream.parameters) || null;
+                            if (params) {
+                                if (Array.isArray(params)) {
+                                    const map = params.reduce((acc, p) => {
+                                        if (p && p.name) acc[p.name.toLowerCase()] = p.value;
+                                        return acc;
+                                    }, {});
+                                    if (!callerNumber && map.from) callerNumber = map.from;
+                                    if (!callSid && map.callsid) callSid = map.callsid;
+                                } else if (typeof params === 'object') {
+                                    const map = Object.keys(params).reduce((acc, k) => {
+                                        acc[k.toLowerCase()] = params[k];
+                                        return acc;
+                                    }, {});
+                                    if (!callerNumber && map.from) callerNumber = map.from;
+                                    if (!callSid && map.callsid) callSid = map.callsid;
+                                }
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+
                         console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callSid:', callSid);
 
                         // Reset start and media timestamp on a new stream
