@@ -313,6 +313,16 @@ fastify.register(async (fastify) => {
                 if (response.type === 'input_audio_buffer.speech_stopped') {
                     handleSpeechStartedEvent();
                 }
+
+                // When user's speech is committed, request OpenAI to create a conversation item from it
+                if (response.type === 'input_audio_buffer.committed') {
+                    console.log('[input_audio_buffer.committed] Requesting conversation item creation...');
+                    if (openAiWs.readyState === WebSocket.OPEN) {
+                        openAiWs.send(JSON.stringify({
+                            type: 'response.create'
+                        }));
+                    }
+                }
             } catch (error) {
                 console.error('Error processing OpenAI message:', error, 'Raw message:', data);
             }
