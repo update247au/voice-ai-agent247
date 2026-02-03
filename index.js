@@ -124,6 +124,7 @@ fastify.register(async (fastify) => {
         let responseStartTimestampTwilio = null;
     let conversationLog = [];
     let callStartTime = new Date();
+    let currentResponseText = '';  // Accumulate text deltas
 
         const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`, {
             headers: {
@@ -235,6 +236,23 @@ fastify.register(async (fastify) => {
                     console.log(`Received event: ${response.type}`, response);
                 }
 
+                // Capture assistant response text (from text.delta events - accumulate)
+                if (response.type === 'response.text.delta' && response.delta) {
+                    currentResponseText += response.delta;
+                    console.log(`[TextDelta] Accumulated: "${currentResponseText}"`);
+                }
+
+                // Save complete assistant response when done
+                if (response.type === 'response.text.done' && currentResponseText.trim()) {
+                    conversationLog.push({
+                        role: 'assistant',
+                        content: currentResponseText.trim(),
+                        timestamp: new Date().toISOString()
+                    });
+                    console.log(`[Transcript] Assistant: ${currentResponseText.trim()}`);
+                    currentResponseText = '';  // Reset for next response
+                }
+
                 // Track conversation items (moved outside LOG_EVENT_TYPES check to ensure capture)
                 if (response.type === 'conversation.item.created') {
                     const item = response.item;
@@ -273,20 +291,6 @@ fastify.register(async (fastify) => {
                             timestamp: new Date().toISOString()
                         });
                         console.log(`[Transcript] Assistant (from transcript.done): ${response.transcript}`);
-                    }
-                }
-
-                // Also capture from response.text_delta (another possible event)
-                if (response.type === 'response.text.delta') {
-                    console.log(`[DEBUG] response.text.delta:`, response.delta);
-                    if (response.delta && response.delta.trim()) {
-                        // Accumulate text deltas
-                        conversationLog.push({
-                            role: 'assistant',
-                            content: response.delta,
-                            timestamp: new Date().toISOString()
-                        });
-                        console.log(`[Transcript] Assistant (from text.delta): ${response.delta}`);
                     }
                 }
 
