@@ -1,0 +1,19 @@
+{
+  "callSid": "<CALL_SID_OR_UNKNOWN>",
+  "callerNumber": "<E.164_OR_RAW_PHONE_NUMBER>",
+  "calleeNumber": "<DESTINATION_NUMBER>",
+  "webhookBody": {
+    "example": "Full Twilio webhook POST body will be stored here as received",
+    "raw": {}
+  },
+  "startTime": "<ISO_TIMESTAMP>",
+  "endTime": "<ISO_TIMESTAMP>",
+  "duration": 0,
+  "conversation": [
+    {
+      "role": "user|assistant|note",
+      "content": "...",
+      "timestamp": "<ISO_TIMESTAMP>"
+    }
+  ]
+}

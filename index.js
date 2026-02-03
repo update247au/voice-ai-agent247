@@ -81,6 +81,9 @@ const LOG_EVENT_TYPES = [
     'response.content.done',
     'rate_limits.updated',
     'response.done',
+    // transcription-related events (may vary by realtime API naming)
+    'input_audio_transcript',
+    'input_audio_transcription',
     'input_audio_buffer.committed',
     'input_audio_buffer.speech_stopped',
     'input_audio_buffer.speech_started',
@@ -213,6 +216,8 @@ fastify.register(async (fastify) => {
                 session: {
                     type: 'realtime',
                     model: "gpt-realtime",
+                    // Enable transcription for incoming audio so caller speech is returned as text events
+                    input_audio_transcription: { model: 'gpt-4o-transcribe' },
                     output_modalities: ["audio"],
                     audio: {
                         input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
@@ -544,6 +549,32 @@ fastify.register(async (fastify) => {
                 console.log(`[saveTranscript] ✓ Transcript saved locally: ${filepath}`);
             } catch (err) {
                 console.error(`[saveTranscript] ✗ Failed to save locally: ${err.message}`, err);
+            }
+
+            // Additionally create a backup file including caller phone number and callSid
+            try {
+                const sanitize = (s) => (String(s || '')).replace(/[^0-9]/g, '') || 'unknown';
+                const callerForName = sanitize(callerNumber);
+                const callSidForName = callSid || streamSid || 'unknown';
+                const backupFilename = `index-${callerForName}-${callSidForName}-${timestamp}.json`;
+
+                // Save locally
+                const backupPath = path.join(CALL_HISTORY_DIR, backupFilename);
+                fs.writeFileSync(backupPath, payload);
+                console.log(`[saveTranscript] ✓ Backup saved locally: ${backupPath}`);
+
+                // Also attempt to upload backup to GCS under a backups/ prefix if possible
+                if (storage && GCS_BUCKET) {
+                    try {
+                        const backupFile = storage.bucket(GCS_BUCKET).file(`backups/${backupFilename}`);
+                        await backupFile.save(payload, { contentType: 'application/json' });
+                        console.log(`[saveTranscript] ✓ Backup uploaded to gs://${GCS_BUCKET}/backups/${backupFilename}`);
+                    } catch (e) {
+                        console.error(`[saveTranscript] ✗ Failed to upload backup to GCS: ${e.message}`);
+                    }
+                }
+            } catch (e) {
+                console.error('[saveTranscript] ✗ Failed to create backup file:', e.message);
             }
         };
 
