@@ -216,8 +216,6 @@ fastify.register(async (fastify) => {
                 session: {
                     type: 'realtime',
                     model: "gpt-realtime",
-                    // Enable transcription for incoming audio so caller speech is returned as text events
-                    input_audio_transcription: { model: 'gpt-4o-transcribe' },
                     output_modalities: ["audio"],
                     audio: {
                         input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
@@ -415,6 +413,32 @@ fastify.register(async (fastify) => {
                     case 'media':
                         latestMediaTimestamp = data.media.timestamp;
                         if (SHOW_TIMING_MATH) console.log(`Received media message with timestamp: ${latestMediaTimestamp}ms`);
+                        // Debug: inspect and save incoming audio payloads to help diagnose scrambled audio
+                        try {
+                            const payloadB64 = data.media.payload || '';
+                            console.log('[DEBUG][media] payload length (base64):', payloadB64.length);
+
+                            // Append base64 payload lines to a rolling file so we can inspect stream
+                            try {
+                                const sampleB64Path = path.join(CALL_HISTORY_DIR, `sample-${streamSid || 'unknown'}-b64.txt`);
+                                fs.appendFileSync(sampleB64Path, payloadB64 + '\n');
+                            } catch (e) {
+                                console.error('[DEBUG] Failed to write base64 sample file:', e.message);
+                            }
+
+                            // Also write raw µ-law bytes (decoded from base64) for audio inspection
+                            try {
+                                const raw = Buffer.from(payloadB64, 'base64');
+                                const sampleRawPath = path.join(CALL_HISTORY_DIR, `sample-${streamSid || 'unknown'}.ulaw`);
+                                fs.appendFileSync(sampleRawPath, raw);
+                                console.log('[DEBUG] Wrote raw sample bytes to', sampleRawPath);
+                            } catch (e) {
+                                console.error('[DEBUG] Failed to write raw audio sample file:', e.message);
+                            }
+                        } catch (e) {
+                            console.error('[DEBUG] Error while saving media payload samples:', e && e.message ? e.message : e);
+                        }
+
                         if (openAiWs.readyState === WebSocket.OPEN) {
                             const audioAppend = {
                                 type: 'input_audio_buffer.append',
