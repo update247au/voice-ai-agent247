@@ -362,11 +362,19 @@ fastify.register(async (fastify) => {
                 
                 // Call OpenAI Whisper API
                 const whisperUrl = 'https://api.openai.com/v1/audio/transcriptions';
+                const contentLength = await new Promise((resolve, reject) => {
+                    form.getLength((err, length) => {
+                        if (err) return reject(err);
+                        resolve(length);
+                    });
+                });
+
                 const response = await fetch(whisperUrl, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                        ...form.getHeaders()
+                        ...form.getHeaders(),
+                        'Content-Length': String(contentLength)
                     },
                     body: form
                 });
@@ -374,6 +382,7 @@ fastify.register(async (fastify) => {
                 if (!response.ok) {
                     const errBody = await response.text();
                     console.error('[Whisper] API error:', response.status, errBody);
+                    console.error('[Whisper] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
                     return;
                 }
                 
