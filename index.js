@@ -20,6 +20,9 @@ const { OPENAI_API_KEY } = process.env;
 // Optional: GCS bucket name for transcript persistence. If not set, falls back to local files.
 const GCS_BUCKET = process.env.GCS_BUCKET || process.env.GOOGLE_CLOUD_BUCKET || null;
 
+// In-memory store for webhook bodies keyed by CallSid (or fallback key)
+const callMeta = {};
+
 let storage = null;
 if (GCS_BUCKET) {
     storage = new Storage();
@@ -104,7 +107,22 @@ fastify.all('/incoming-call', async (request, reply) => {
     const to = request.body.To || '';
     const callSid = request.body.CallSid || '';
 
+    // Store the full webhook body so it can be attached to the transcript later
+    try {
+        const callKey = callSid || `${from}-${Date.now()}`;
+        callMeta[callKey] = { webhookBody: request.body, receivedAt: new Date().toISOString() };
+        console.log('[DEBUG] Stored webhook body for callKey:', callKey);
+    } catch (e) {
+        console.error('[DEBUG] Error storing webhook body:', e.message);
+    }
+
     console.log('[DEBUG] Extracted from webhook - from:', from, 'to:', to, 'callSid:', callSid);
+
+    const fromEsc = encodeURIComponent(from || '');
+    const toEsc = encodeURIComponent(to || '');
+    const callSidEsc = encodeURIComponent(callSid || '');
+
+    const streamUrl = `wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream?from=${fromEsc}&to=${toEsc}&callSid=${callSidEsc}`;
 
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
@@ -112,7 +130,7 @@ fastify.all('/incoming-call', async (request, reply) => {
                               <Pause length="1"/>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede"></Say>
                               <Connect>
-                                  <Stream url="wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream">
+                                  <Stream url="${streamUrl}">
                                       <Parameter name="from" value="${from}" />
                                       <Parameter name="to" value="${to}" />
                                       <Parameter name="callSid" value="${callSid}" />
@@ -137,6 +155,7 @@ fastify.register(async (fastify) => {
         let callerNumber = null; // Caller phone number (if provided by Twilio)
         let calleeNumber = null; // Called/destination phone number (if provided by Twilio)
         let callSid = null; // Twilio call SID (if provided)
+        let webhookBody = null; // Full webhook body if available
     let conversationLog = [];
     let callStartTime = new Date();
     let currentResponseText = '';  // Accumulate text deltas
@@ -157,6 +176,19 @@ fastify.register(async (fastify) => {
         } catch (err) {
             console.error('[DEBUG] Error parsing WS URL:', err.message);
         }
+
+            // If callSid was provided as a query param, try to attach saved webhook body
+            try {
+                const qParsed = new URL(req && req.url ? String(req.url) : '', 'http://localhost');
+                const qCallSid = qParsed.searchParams.get('callSid') || qParsed.searchParams.get('CallSid') || null;
+                const lookupKey = qCallSid || null;
+                if (lookupKey && callMeta[lookupKey]) {
+                    webhookBody = callMeta[lookupKey].webhookBody || null;
+                    console.log('[DEBUG] Attached webhook body from callMeta for key (from WS URL):', lookupKey);
+                }
+            } catch (e) {
+                // ignore
+            }
 
         const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`, {
             headers: {
@@ -420,7 +452,19 @@ fastify.register(async (fastify) => {
                             console.error('[DEBUG] Error parsing parameters:', e.message);
                         }
 
-                        console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callee:', calleeNumber, 'callSid:', callSid);
+                            // If callSid is available, try to attach webhook body saved earlier
+                            try {
+                                if (callSid && callMeta[callSid]) {
+                                    webhookBody = callMeta[callSid].webhookBody || null;
+                                    // free memory for this key now that we've attached it
+                                    delete callMeta[callSid];
+                                    console.log('[DEBUG] Attached webhook body from callMeta for callSid:', callSid);
+                                }
+                            } catch (e) {
+                                console.error('[DEBUG] Error attaching webhook body from callMeta:', e.message);
+                            }
+
+                            console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callee:', calleeNumber, 'callSid:', callSid);
 
                         // Reset start and media timestamp on a new stream
                         responseStartTimestampTwilio = null;
@@ -459,6 +503,7 @@ fastify.register(async (fastify) => {
                 callSid: callSid,
                 callerNumber: callerNumber,
                 calleeNumber: calleeNumber,
+                webhookBody: webhookBody || null,
                 startTime: callStartTime.toISOString(),
                 endTime: callEndTime.toISOString(),
                 duration: duration,
