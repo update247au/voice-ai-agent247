@@ -291,6 +291,10 @@ fastify.register(async (fastify) => {
                         responseStartTimestampTwilio = null;
                         latestMediaTimestamp = 0;
                         break;
+                    case 'stop':
+                        console.log('[Twilio stop event] Call ended. Saving transcript.');
+                        saveTranscript().catch((err) => console.error('[Twilio stop] Error saving transcript:', err));
+                        break;
                     case 'mark':
                         if (markQueue.length > 0) {
                             markQueue.shift();
