@@ -235,7 +235,7 @@ fastify.register(async (fastify) => {
                 // Track conversation items (moved outside LOG_EVENT_TYPES check to ensure capture)
                 if (response.type === 'conversation.item.created') {
                     const item = response.item;
-                    if (SHOW_TIMING_MATH) console.log('conversation.item.created:', JSON.stringify(item));
+                    console.log(`[DEBUG] conversation.item.created received:`, JSON.stringify(item));
                     if (item && item.role === 'user' && item.content) {
                         const textContent = item.content.find(c => c.type === 'input_text');
                         if (textContent) {
@@ -260,6 +260,19 @@ fastify.register(async (fastify) => {
                     }
                 }
 
+                // Capture assistant transcript (alternative approach)
+                if (response.type === 'response.transcript.done') {
+                    console.log(`[DEBUG] response.transcript.done:`, response.transcript);
+                    if (response.transcript && response.transcript.trim()) {
+                        conversationLog.push({
+                            role: 'assistant',
+                            content: response.transcript,
+                            timestamp: new Date().toISOString()
+                        });
+                        console.log(`[Transcript] Assistant (from transcript.done): ${response.transcript}`);
+                    }
+                }
+
                 if (response.type === 'response.output_audio.delta' && response.delta) {
                     const audioDelta = {
                         event: 'media',
@@ -281,7 +294,7 @@ fastify.register(async (fastify) => {
                     sendMark(connection, streamSid);
                 }
 
-                if (response.type === 'input_audio_buffer.speech_started') {
+                if (response.type === 'input_audio_buffer.speech_stopped') {
                     handleSpeechStartedEvent();
                 }
             } catch (error) {
