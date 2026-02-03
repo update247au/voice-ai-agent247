@@ -131,6 +131,7 @@ fastify.register(async (fastify) => {
         let markQueue = [];
         let responseStartTimestampTwilio = null;
         let callerNumber = null; // Caller phone number (if provided by Twilio)
+        let calleeNumber = null; // Called/destination phone number (if provided by Twilio)
         let callSid = null; // Twilio call SID (if provided)
     let conversationLog = [];
     let callStartTime = new Date();
@@ -373,32 +374,39 @@ fastify.register(async (fastify) => {
                         // Try to capture caller phone number and call SID from common places
                         callSid = data.start.callSid || data.start.CallSid || callSid || null;
                         callerNumber = data.start.from || data.start.From || data.start.caller || callerNumber || null;
+                        calleeNumber = data.start.to || data.start.To || calleeNumber || null;
 
                         // Twilio sends <Parameter> values in the start event as an array under start.parameters
                         try {
                             const params = data.start.parameters || (data.start.stream && data.start.stream.parameters) || null;
                             if (params) {
+                                console.log('[DEBUG] Raw parameters received:', JSON.stringify(params));
+                                
                                 if (Array.isArray(params)) {
-                                    const map = params.reduce((acc, p) => {
-                                        if (p && p.name) acc[p.name.toLowerCase()] = p.value;
-                                        return acc;
-                                    }, {});
-                                    if (!callerNumber && map.from) callerNumber = map.from;
-                                    if (!callSid && map.callsid) callSid = map.callsid;
+                                    // params is an array of {name, value} objects
+                                    params.forEach(p => {
+                                        if (p && p.name && p.value) {
+                                            const nameLC = p.name.toLowerCase();
+                                            if (nameLC === 'from') callerNumber = p.value;
+                                            if (nameLC === 'to') calleeNumber = p.value;
+                                            if (nameLC === 'callsid') callSid = p.value;
+                                        }
+                                    });
                                 } else if (typeof params === 'object') {
-                                    const map = Object.keys(params).reduce((acc, k) => {
-                                        acc[k.toLowerCase()] = params[k];
-                                        return acc;
-                                    }, {});
-                                    if (!callerNumber && map.from) callerNumber = map.from;
-                                    if (!callSid && map.callsid) callSid = map.callsid;
+                                    // params is an object with key-value pairs
+                                    Object.entries(params).forEach(([k, v]) => {
+                                        const keyLC = String(k).toLowerCase();
+                                        if (keyLC === 'from') callerNumber = v;
+                                        if (keyLC === 'to') calleeNumber = v;
+                                        if (keyLC === 'callsid') callSid = v;
+                                    });
                                 }
                             }
                         } catch (e) {
-                            // ignore
+                            console.error('[DEBUG] Error parsing parameters:', e.message);
                         }
 
-                        console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callSid:', callSid);
+                        console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callee:', calleeNumber, 'callSid:', callSid);
 
                         // Reset start and media timestamp on a new stream
                         responseStartTimestampTwilio = null;
@@ -436,6 +444,7 @@ fastify.register(async (fastify) => {
                 callId: streamSid,
                 callSid: callSid,
                 callerNumber: callerNumber,
+                calleeNumber: calleeNumber,
                 startTime: callStartTime.toISOString(),
                 endTime: callEndTime.toISOString(),
                 duration: duration,
@@ -443,11 +452,7 @@ fastify.register(async (fastify) => {
                     role: 'note',
                     content: 'No conversation items captured during this call. Check conversation event structure.',
                     timestamp: new Date().toISOString()
-                }],
-                _debug: {
-                    totalEventsReceived: allEvents.length,
-                    eventTypes: allEvents.slice(0, 50)  // First 50 events for debugging
-                }
+                }]
             };
 
             const payload = JSON.stringify(transcript, null, 2);
