@@ -69,6 +69,7 @@ const SYSTEM_MESSAGE = 'You are the Support and sales specialist for Update247 C
 const VOICE = 'alloy';
 
 const TEMPERATURE = 0.4; // Controls the randomness of the AI's responsess
+const USE_REALTIME_TRANSCRIPTION = true;
 //const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
 
 
@@ -227,6 +228,7 @@ fastify.register(async (fastify) => {
                         output: { format: { type: 'audio/pcmu' }, voice: VOICE },
                     },
                     instructions: SYSTEM_MESSAGE,
+                    ...(USE_REALTIME_TRANSCRIPTION ? { input_audio_transcription: { model: 'gpt-4o-transcribe' } } : {}),
                 },
             };
 
@@ -434,9 +436,29 @@ fastify.register(async (fastify) => {
 
                 // Detect when caller speech starts (from OpenAI Realtime API)
                 if (response.type === 'input_audio_buffer.speech_started') {
-                    isCapturingCallerSpeech = true;
-                    callerAudioChunks = [];
-                    console.log('[Whisper] Caller speech detected. Starting audio capture...');
+                    if (!USE_REALTIME_TRANSCRIPTION) {
+                        isCapturingCallerSpeech = true;
+                        callerAudioChunks = [];
+                        console.log('[Whisper] Caller speech detected. Starting audio capture...');
+                    }
+                }
+
+                // Realtime transcription events (built-in)
+                if (
+                    response.type === 'input_audio_transcript.done' ||
+                    response.type === 'input_audio_transcription.done' ||
+                    response.type === 'input_audio_transcript' ||
+                    response.type === 'input_audio_transcription'
+                ) {
+                    const transcriptText = response.transcript || response.text || '';
+                    if (transcriptText && transcriptText.trim()) {
+                        conversationLog.push({
+                            role: 'user',
+                            content: transcriptText,
+                            timestamp: new Date().toISOString()
+                        });
+                        console.log(`[Transcript] User (realtime): ${transcriptText}`);
+                    }
                 }
 
                 // Capture conversation items from conversation.item.added events
@@ -510,7 +532,7 @@ fastify.register(async (fastify) => {
                     handleSpeechStartedEvent();
                     
                     // Caller speech has stopped; transcribe the buffered audio
-                    if (isCapturingCallerSpeech) {
+                    if (!USE_REALTIME_TRANSCRIPTION && isCapturingCallerSpeech) {
                         isCapturingCallerSpeech = false;
                         console.log('[Whisper] Speech stopped. Transcribing buffered audio...');
                         transcribeCallerAudio().catch(err => console.error('[Whisper] Transcription error:', err));
