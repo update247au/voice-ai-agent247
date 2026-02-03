@@ -221,6 +221,8 @@ fastify.register(async (fastify) => {
                         input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
                         output: { format: { type: 'audio/pcmu' }, voice: VOICE },
                     },
+                    // Enable caller audio transcription for input speech
+                    input_audio_transcription: { model: "gpt-4o-transcribe" },
                     instructions: SYSTEM_MESSAGE,
                 },
             };
@@ -363,6 +365,19 @@ fastify.register(async (fastify) => {
                         });
                         console.log(`[Transcript] Assistant (from transcript.done): ${response.transcript}`);
                     }
+                }
+
+                // Capture caller speech from input audio transcription events (partial/final)
+                if (
+                    (response.type && String(response.type).startsWith('input_audio_transcription')) &&
+                    response.transcript
+                ) {
+                    conversationLog.push({
+                        role: 'user',
+                        content: response.transcript,
+                        timestamp: new Date().toISOString()
+                    });
+                    console.log(`[Transcript] User (from input_audio_transcription): ${response.transcript}`);
                 }
 
                 if (response.type === 'response.output_audio.delta' && response.delta) {
