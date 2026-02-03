@@ -83,7 +83,8 @@ const LOG_EVENT_TYPES = [
     'input_audio_buffer.speech_started',
     'session.created',
     'session.updated',
-    'response.function_call_arguments.done'
+    'response.function_call_arguments.done',
+    'conversation.item.created'
 ];
 
 // Show AI response elapsed timing calculations
@@ -229,34 +230,34 @@ fastify.register(async (fastify) => {
 
                 if (LOG_EVENT_TYPES.includes(response.type)) {
                     console.log(`Received event: ${response.type}`, response);
+                }
 
-                                // Track conversation items
-                                if (response.type === 'conversation.item.created') {
-                                    const item = response.item;
-                                    if (SHOW_TIMING_MATH) console.log('conversation.item.created:', JSON.stringify(item));
-                                    if (item && item.role === 'user' && item.content) {
-                                        const textContent = item.content.find(c => c.type === 'input_text');
-                                        if (textContent) {
-                                            conversationLog.push({
-                                                role: 'user',
-                                                content: textContent.text,
-                                                timestamp: new Date().toISOString()
-                                            });
-                                            console.log(`[Transcript] User: ${textContent.text}`);
-                                        }
-                                    }
-                                    if (item && item.role === 'assistant' && item.content) {
-                                        const textContent = item.content.find(c => c.type === 'text');
-                                        if (textContent) {
-                                            conversationLog.push({
-                                                role: 'assistant',
-                                                content: textContent.text,
-                                                timestamp: new Date().toISOString()
-                                            });
-                                            console.log(`[Transcript] Assistant: ${textContent.text}`);
-                                        }
-                                    }
-                                }
+                // Track conversation items (moved outside LOG_EVENT_TYPES check to ensure capture)
+                if (response.type === 'conversation.item.created') {
+                    const item = response.item;
+                    if (SHOW_TIMING_MATH) console.log('conversation.item.created:', JSON.stringify(item));
+                    if (item && item.role === 'user' && item.content) {
+                        const textContent = item.content.find(c => c.type === 'input_text');
+                        if (textContent) {
+                            conversationLog.push({
+                                role: 'user',
+                                content: textContent.text,
+                                timestamp: new Date().toISOString()
+                            });
+                            console.log(`[Transcript] User: ${textContent.text}`);
+                        }
+                    }
+                    if (item && item.role === 'assistant' && item.content) {
+                        const textContent = item.content.find(c => c.type === 'text');
+                        if (textContent) {
+                            conversationLog.push({
+                                role: 'assistant',
+                                content: textContent.text,
+                                timestamp: new Date().toISOString()
+                            });
+                            console.log(`[Transcript] Assistant: ${textContent.text}`);
+                        }
+                    }
                 }
 
                 if (response.type === 'response.output_audio.delta' && response.delta) {
