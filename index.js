@@ -244,30 +244,14 @@ fastify.register(async (fastify) => {
                     console.log(`Received event: ${response.type}`, response);
                 }
 
-                // Capture assistant response text (from text.delta events - accumulate)
-                if (response.type === 'response.text.delta' && response.delta) {
-                    currentResponseText += response.delta;
-                    console.log(`[TextDelta] Accumulated: "${currentResponseText}"`);
-                }
-
-                // Save complete assistant response when done
-                if (response.type === 'response.text.done' && currentResponseText.trim()) {
-                    conversationLog.push({
-                        role: 'assistant',
-                        content: currentResponseText.trim(),
-                        timestamp: new Date().toISOString()
-                    });
-                    console.log(`[Transcript] Assistant: ${currentResponseText.trim()}`);
-                    currentResponseText = '';  // Reset for next response
-                }
-
-                // Track conversation items (moved outside LOG_EVENT_TYPES check to ensure capture)
-                if (response.type === 'conversation.item.created') {
+                // Capture conversation items from conversation.item.added events
+                if (response.type === 'conversation.item.added' && response.item) {
                     const item = response.item;
-                    console.log(`[DEBUG] conversation.item.created received:`, JSON.stringify(item));
-                    if (item && item.role === 'user' && item.content) {
+                    
+                    // Handle user messages (from caller's voice)
+                    if (item.role === 'user' && item.content && Array.isArray(item.content)) {
                         const textContent = item.content.find(c => c.type === 'input_text');
-                        if (textContent) {
+                        if (textContent && textContent.text) {
                             conversationLog.push({
                                 role: 'user',
                                 content: textContent.text,
@@ -276,23 +260,26 @@ fastify.register(async (fastify) => {
                             console.log(`[Transcript] User: ${textContent.text}`);
                         }
                     }
-                    if (item && item.role === 'assistant' && item.content) {
+                    
+                    // Handle assistant messages from item.content
+                    if (item.role === 'assistant' && item.content && Array.isArray(item.content)) {
                         const textContent = item.content.find(c => c.type === 'text');
-                        if (textContent) {
+                        if (textContent && textContent.text) {
                             conversationLog.push({
                                 role: 'assistant',
                                 content: textContent.text,
                                 timestamp: new Date().toISOString()
                             });
-                            console.log(`[Transcript] Assistant: ${textContent.text}`);
+                            console.log(`[Transcript] Assistant (from item): ${textContent.text}`);
                         }
                     }
                 }
 
-                // Capture assistant transcript (alternative approach)
-                if (response.type === 'response.transcript.done') {
-                    console.log(`[DEBUG] response.transcript.done:`, response.transcript);
-                    if (response.transcript && response.transcript.trim()) {
+                // Alternative: Capture assistant response transcript from response.output_audio_transcript.done
+                if (response.type === 'response.output_audio_transcript.done' && response.transcript) {
+                    // Only log if not already captured from conversation.item.added
+                    const lastEntry = conversationLog[conversationLog.length - 1];
+                    if (!lastEntry || lastEntry.content !== response.transcript || lastEntry.role !== 'assistant') {
                         conversationLog.push({
                             role: 'assistant',
                             content: response.transcript,
