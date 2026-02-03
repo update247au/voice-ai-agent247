@@ -101,30 +101,32 @@ fastify.get('/', async (request, reply) => {
 // Route for Twilio to handle incoming calls
 // <Say> punctuation to improve text-to-speech translation
 fastify.all('/incoming-call', async (request, reply) => {
-    console.log('[DEBUG] /incoming-call received. request.body:', JSON.stringify(request.body));
-    
-    const from = request.body.From || '';
-    const to = request.body.To || '';
-    const callSid = request.body.CallSid || '';
-
-    // Store the full webhook body so it can be attached to the transcript later
     try {
-        const callKey = callSid || `${from}-${Date.now()}`;
-        callMeta[callKey] = { webhookBody: request.body, receivedAt: new Date().toISOString() };
-        console.log('[DEBUG] Stored webhook body for callKey:', callKey);
-    } catch (e) {
-        console.error('[DEBUG] Error storing webhook body:', e.message);
-    }
+        const body = request.body || {};
+        console.log('[DEBUG] /incoming-call received. request.body:', JSON.stringify(body));
 
-    console.log('[DEBUG] Extracted from webhook - from:', from, 'to:', to, 'callSid:', callSid);
+        const from = body.From || body.from || '';
+        const to = body.To || body.to || '';
+        const callSid = body.CallSid || body.callSid || '';
 
-    const fromEsc = encodeURIComponent(from || '');
-    const toEsc = encodeURIComponent(to || '');
-    const callSidEsc = encodeURIComponent(callSid || '');
+        // Store the full webhook body so it can be attached to the transcript later
+        try {
+            const callKey = callSid || `${from}-${Date.now()}`;
+            callMeta[callKey] = { webhookBody: body, receivedAt: new Date().toISOString() };
+            console.log('[DEBUG] Stored webhook body for callKey:', callKey);
+        } catch (e) {
+            console.error('[DEBUG] Error storing webhook body:', e.message);
+        }
 
-    const streamUrl = `wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream?from=${fromEsc}&to=${toEsc}&callSid=${callSidEsc}`;
+        console.log('[DEBUG] Extracted from webhook - from:', from, 'to:', to, 'callSid:', callSid);
 
-    const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
+        const fromEsc = encodeURIComponent(from || '');
+        const toEsc = encodeURIComponent(to || '');
+        const callSidEsc = encodeURIComponent(callSid || '');
+
+        const streamUrl = `wss://cloudrun-ai247-452739190322.us-south1.run.app/media-stream?from=${fromEsc}&to=${toEsc}&callSid=${callSidEsc}`;
+
+        const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede">Connecting your call to Update 2 4 7</Say>
                               <Pause length="1"/>
@@ -138,7 +140,13 @@ fastify.all('/incoming-call', async (request, reply) => {
                               </Connect>
                           </Response>`;
 
-    reply.type('text/xml').send(twimlResponse);
+        reply.type('text/xml').status(200).send(twimlResponse);
+    } catch (err) {
+        console.error('[ERROR] /incoming-call handler failed:', err && err.message ? err.message : err);
+        // Always respond with valid TwiML to avoid Twilio playing the default error message
+        const safeTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">The application encountered an error. Goodbye.</Say></Response>`;
+        try { reply.type('text/xml').status(200).send(safeTwiml); } catch (e) { console.error('[ERROR] Failed to send fallback TwiML:', e); }
+    }
 });
 
 // WebSocket route for media-stream
