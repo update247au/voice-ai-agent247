@@ -291,6 +291,7 @@ fastify.register(async (fastify) => {
     let silenceTimer = null;
     let silenceCount = 0;
     let waitingForCaller = false;
+    let callerSpokeSinceLastResponse = false;
     
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
@@ -693,6 +694,7 @@ fastify.register(async (fastify) => {
                     }
                     waitingForCaller = false;
                     silenceCount = 0; // Reset silence count when caller speaks
+                    callerSpokeSinceLastResponse = true;
                     
                     if (!USE_REALTIME_TRANSCRIPTION) {
                         isCapturingCallerSpeech = true;
@@ -849,10 +851,13 @@ fastify.register(async (fastify) => {
                 // When user's speech is committed, request OpenAI to create a conversation item from it
                 if (response.type === 'input_audio_buffer.committed') {
                     console.log('[input_audio_buffer.committed] Requesting conversation item creation...');
-                    if (openAiWs.readyState === WebSocket.OPEN) {
+                    if (callerSpokeSinceLastResponse && openAiWs.readyState === WebSocket.OPEN) {
                         openAiWs.send(JSON.stringify({
                             type: 'response.create'
                         }));
+                        callerSpokeSinceLastResponse = false;
+                    } else {
+                        console.log('[input_audio_buffer.committed] No caller speech detected for this turn; skipping response.create');
                     }
                 }
             } catch (error) {
