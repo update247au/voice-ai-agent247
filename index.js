@@ -862,32 +862,6 @@ fastify.register(async (fastify) => {
                         if (isCapturingCallerSpeech && data.media.payload) {
                             callerAudioChunks.push(data.media.payload);
                         }
-                        
-                        // Debug: inspect and save incoming audio payloads to help diagnose scrambled audio
-                        try {
-                            const payloadB64 = data.media.payload || '';
-                            console.log('[DEBUG][media] payload length (base64):', payloadB64.length);
-
-                            // Append base64 payload lines to a rolling file so we can inspect stream
-                            try {
-                                const sampleB64Path = path.join(CALL_HISTORY_DIR, `sample-${streamSid || 'unknown'}-b64.txt`);
-                                fs.appendFileSync(sampleB64Path, payloadB64 + '\n');
-                            } catch (e) {
-                                console.error('[DEBUG] Failed to write base64 sample file:', e.message);
-                            }
-
-                            // Also write raw µ-law bytes (decoded from base64) for audio inspection
-                            try {
-                                const raw = Buffer.from(payloadB64, 'base64');
-                                const sampleRawPath = path.join(CALL_HISTORY_DIR, `sample-${streamSid || 'unknown'}.ulaw`);
-                                fs.appendFileSync(sampleRawPath, raw);
-                                console.log('[DEBUG] Wrote raw sample bytes to', sampleRawPath);
-                            } catch (e) {
-                                console.error('[DEBUG] Failed to write raw audio sample file:', e.message);
-                            }
-                        } catch (e) {
-                            console.error('[DEBUG] Error while saving media payload samples:', e && e.message ? e.message : e);
-                        }
 
                         if (openAiWs.readyState === WebSocket.OPEN) {
                             const audioAppend = {
