@@ -292,6 +292,8 @@ fastify.register(async (fastify) => {
     let silenceCount = 0;
     let waitingForCaller = false;
     let callerSpokeSinceLastResponse = false;
+    let conversationTurns = 0; // Track number of exchanges
+    let lastSilencePromptTime = 0; // Prevent rapid-fire silence prompts
     
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
@@ -402,7 +404,7 @@ fastify.register(async (fastify) => {
                     content: [
                         {
                             type: 'input_text',
-                            text: 'Greet the user with : This is Rose from Update247. How are you today?'
+                            text: 'Greet the caller: "Hello, this is Update247. How may I help you today?" Then WAIT for their response. Do not ask another question until they speak.'
                         }
                     ]
                 }
@@ -571,6 +573,14 @@ fastify.register(async (fastify) => {
                 return;
             }
             
+            // Cooldown: don't fire again if we just fired within last 3 seconds
+            const now = Date.now();
+            if (now - lastSilencePromptTime < 3000) {
+                console.log('[handleSilence] Cooldown active, ignoring (last prompt was', now - lastSilencePromptTime, 'ms ago)');
+                return;
+            }
+            lastSilencePromptTime = now;
+            
             silenceCount = silenceCount + 1;
             
             let prompt = '';
@@ -695,6 +705,8 @@ fastify.register(async (fastify) => {
                     waitingForCaller = false;
                     silenceCount = 0; // Reset silence count when caller speaks
                     callerSpokeSinceLastResponse = true;
+                    conversationTurns++; // Increment conversation turns
+                    console.log('[Conversation] Turn count:', conversationTurns);
                     
                     if (!USE_REALTIME_TRANSCRIPTION) {
                         isCapturingCallerSpeech = true;
@@ -769,22 +781,29 @@ fastify.register(async (fastify) => {
                 // When AI finishes speaking audio, start silence timer
                 if (response.type === 'response.audio.done' || response.type === 'response.audio_transcript.done') {
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.log(`[AI FINISHED AUDIO] ${response.type} - Starting silence timer`);
+                    console.log(`[AI FINISHED AUDIO] ${response.type}`);
+                    console.log('  conversationTurns:', conversationTurns);
+                    console.log('  callerSpokeSinceLastResponse:', callerSpokeSinceLastResponse);
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
-                    // Clear any existing timer first
-                    if (silenceTimer) {
-                        clearTimeout(silenceTimer);
-                        console.log('[Silence Timer] Cleared previous timer');
+                    // Only start silence timer if caller has spoken at least once (not initial greeting)
+                    if (conversationTurns > 0) {
+                        // Clear any existing timer first
+                        if (silenceTimer) {
+                            clearTimeout(silenceTimer);
+                            console.log('[Silence Timer] Cleared previous timer');
+                        }
+                        
+                        waitingForCaller = true;
+                        silenceTimer = setTimeout(() => {
+                            console.log('⏰⏰⏰ [TIMER FIRED] 5 seconds elapsed! ⏰⏰⏰');
+                            handleSilence();
+                        }, 5000); // 5 seconds
+                        
+                        console.log('[Silence Timer] ✓ Timer started (5 seconds). Waiting for caller...');
+                    } else {
+                        console.log('[Silence Timer] Skipping - waiting for first caller input (conversationTurns=0)');
                     }
-                    
-                    waitingForCaller = true;
-                    silenceTimer = setTimeout(() => {
-                        console.log('⏰⏰⏰ [TIMER FIRED] 5 seconds elapsed! ⏰⏰⏰');
-                        handleSilence();
-                    }, 5000); // 5 seconds
-                    
-                    console.log('[Silence Timer] ✓ Timer started (5 seconds). Waiting for caller...');
                 }
                 
                 // Also try response.done as fallback
