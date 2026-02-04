@@ -227,7 +227,6 @@ fastify.register(async (fastify) => {
                         input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
                         output: { format: { type: 'audio/pcmu' }, voice: VOICE },
                     },
-                    input_audio_transcription: { model: "whisper-1" },
                     instructions: SYSTEM_MESSAGE,
                 },
             };
