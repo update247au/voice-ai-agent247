@@ -719,6 +719,17 @@ fastify.register(async (fastify) => {
         const saveTranscript = async () => {
             console.log(`[saveTranscript] Called. conversationLog length: ${conversationLog.length}, GCS_BUCKET: ${GCS_BUCKET}`);
             
+            // Extract numbers from webhookBody if not already set
+            if (!callerNumber && webhookBody) {
+                callerNumber = webhookBody.From || webhookBody.from || null;
+            }
+            if (!calleeNumber && webhookBody) {
+                calleeNumber = webhookBody.To || webhookBody.to || null;
+            }
+            if (!callSid && webhookBody) {
+                callSid = webhookBody.CallSid || webhookBody.callSid || null;
+            }
+            
             const callEndTime = new Date();
             const duration = Math.round((callEndTime - callStartTime) / 1000); // Duration in seconds
             
