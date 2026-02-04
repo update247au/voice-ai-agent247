@@ -102,7 +102,7 @@ STATE A — COLLECT PROPERTY Name
 
 STATE B — GET PROPERTY ID
 - Say: "Thanks. Do you have your property ID is <ID>. its is visible on top left when logged into Update247."
-- If yes -> go to STATE D.
+- If yes -> go to STATE G.
 - If no -> ask : how can I help you ?-> become a sales or support agent based on their response.
 
 STATE C — COLLECT PROPERTY NAME
@@ -161,9 +161,9 @@ Say:
 I can help you.
 May I please have your property ID?"`
 ;
-const VOICE = 'alloy';
+const VOICE = 'sage';
 
-const TEMPERATURE = 0.4; // Controls the randomness of the AI's responsess
+const TEMPERATURE = 0.2; // Controls the randomness of the AI's responsess
 const USE_REALTIME_TRANSCRIPTION = false;
 //const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
 
