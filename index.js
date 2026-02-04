@@ -183,6 +183,7 @@ fastify.register(async (fastify) => {
         let calleeNumber = null; // Called/destination phone number (if provided by Twilio)
         let callSid = null; // Twilio call SID (if provided)
         let webhookBody = null; // Full webhook body if available
+        let recordingSid = null; // Twilio recording SID
     let conversationLog = [];
     let callStartTime = new Date();
     let currentResponseText = '';  // Accumulate text deltas
@@ -678,7 +679,8 @@ fastify.register(async (fastify) => {
                                     .recordings
                                     .create({ recordingChannels: 'dual' })
                                     .then(recording => {
-                                        console.log('[Recording] Started recording:', recording.sid);
+                                        recordingSid = recording.sid;
+                                        console.log('[Recording] Started recording:', recordingSid);
                                     })
                                     .catch(err => {
                                         console.error('[Recording] Failed to start:', err.message);
@@ -725,6 +727,7 @@ fastify.register(async (fastify) => {
             const transcript = {
                 callId: streamSid,
                 callSid: callSid,
+                recordingSid: recordingSid,
                 callerNumber: callerNumber,
                 calleeNumber: calleeNumber,
                 webhookBody: webhookBody || null,
