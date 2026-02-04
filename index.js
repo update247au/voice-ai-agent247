@@ -564,52 +564,11 @@ fastify.register(async (fastify) => {
             }
         };
         
-        // Handle silence after AI speaks - prompt AI to follow up
+        // Handle silence after AI speaks - DISABLED
+        // AI will only respond to real caller input, not auto-prompts
         const handleSilence = () => {
-            console.log(`[handleSilence] Called. waitingForCaller: ${waitingForCaller}, silenceCount: ${silenceCount}`);
-            
-            if (!waitingForCaller) {
-                console.log('[handleSilence] Not waiting for caller, ignoring');
-                return;
-            }
-            
-            // Cooldown: don't fire again if we just fired within last 3 seconds
-            const now = Date.now();
-            if (now - lastSilencePromptTime < 3000) {
-                console.log('[handleSilence] Cooldown active, ignoring (last prompt was', now - lastSilencePromptTime, 'ms ago)');
-                return;
-            }
-            lastSilencePromptTime = now;
-            
-            silenceCount = silenceCount + 1;
-            
-            let prompt = '';
-            
-            if (silenceCount === 1) {
-                prompt = "The caller did not respond. Repeat the question slowly and politely. Use simpler words.";
-            } else {
-                prompt = "The caller is still silent. Rephrase the question in a very simple way. Offer an alternative.";
-            }
-            
-            console.log(`[Silence Detected] Count: ${silenceCount}, sending prompt to AI: "${prompt}"`);
-            
-            // Send a conversation item to prompt the AI to follow up
-            const followUpMessage = {
-                type: 'conversation.item.create',
-                item: {
-                    type: 'message',
-                    role: 'user',
-                    content: [{
-                        type: 'input_text',
-                        text: prompt
-                    }]
-                }
-            };
-            
-            openAiWs.send(JSON.stringify(followUpMessage));
-            openAiWs.send(JSON.stringify({ type: 'response.create' }));
-            
-            console.log('[Silence] Response.create sent to OpenAI');
+            console.log('[handleSilence] Called but DISABLED - AI waits for real caller input');
+            return;
         };
 
         // Open event for OpenAI WebSocket
@@ -778,60 +737,17 @@ fastify.register(async (fastify) => {
                     }
                 }
                 
-                // When AI finishes speaking audio, start silence timer
+                // When AI finishes speaking audio, DO NOT auto-prompt on silence
+                // Only AI should wait for real caller input
                 if (response.type === 'response.audio.done' || response.type === 'response.audio_transcript.done') {
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.log(`[AI FINISHED AUDIO] ${response.type}`);
-                    console.log('  conversationTurns:', conversationTurns);
-                    console.log('  callerSpokeSinceLastResponse:', callerSpokeSinceLastResponse);
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    
-                    // Only start silence timer if caller has spoken at least once (not initial greeting)
-                    if (conversationTurns > 0) {
-                        // Clear any existing timer first
-                        if (silenceTimer) {
-                            clearTimeout(silenceTimer);
-                            console.log('[Silence Timer] Cleared previous timer');
-                        }
-                        
-                        waitingForCaller = true;
-                        silenceTimer = setTimeout(() => {
-                            console.log('⏰⏰⏰ [TIMER FIRED] 5 seconds elapsed! ⏰⏰⏰');
-                            handleSilence();
-                        }, 5000); // 5 seconds
-                        
-                        console.log('[Silence Timer] ✓ Timer started (5 seconds). Waiting for caller...');
-                    } else {
-                        console.log('[Silence Timer] Skipping - waiting for first caller input (conversationTurns=0)');
-                    }
+                    console.log(`[AI FINISHED AUDIO] ${response.type} - Waiting for real caller input (silence detection disabled)`);
+                    // Silence timer disabled - let caller respond naturally
                 }
                 
-                // Also try response.done as fallback
+                // Also try response.done as fallback - DISABLED
                 if (response.type === 'response.done') {
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.log('[RESPONSE DONE] Response completed');
-                    console.log('  waitingForCaller:', waitingForCaller);
-                    console.log('  silenceTimer exists:', !!silenceTimer);
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    
-                    // Only start timer if we haven't already started it from audio.done
-                    if (!waitingForCaller) {
-                        console.log('[response.done] Starting silence timer as fallback');
-                        
-                        if (silenceTimer) {
-                            clearTimeout(silenceTimer);
-                        }
-                        
-                        waitingForCaller = true;
-                        silenceTimer = setTimeout(() => {
-                            console.log('⏰⏰⏰ [TIMER FIRED from response.done] 5 seconds elapsed! ⏰⏰⏰');
-                            handleSilence();
-                        }, 5000);
-                        
-                        console.log('[Silence Timer] ✓ Timer started from response.done (5 seconds)');
-                    } else {
-                        console.log('[response.done] Timer already running, not starting another');
-                    }
+                    console.log('[response.done] Response completed - silence detection disabled');
+                    // Silence timer disabled - let caller respond naturally
                 }
 
 
