@@ -393,7 +393,7 @@ fastify.register(async (fastify) => {
                     content: [
                         {
                             type: 'input_text',
-                            text: 'Greet the user with : Update247 you are speaking with RAJ. How are you doing today?'
+                            text: 'Greet the user with : This is Rose from Update247. How are you today?'
                         }
                     ]
                 }
