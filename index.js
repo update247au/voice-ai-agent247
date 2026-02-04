@@ -721,8 +721,19 @@ fastify.register(async (fastify) => {
             
             const callEndTime = new Date();
             const duration = Math.round((callEndTime - callStartTime) / 1000); // Duration in seconds
-            const timestamp = callStartTime.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const filename = `call-${streamSid || 'unknown'}-${timestamp}.json`;
+            
+            // Format: call-<callerNumber>-<toNumber>-<dd>-<mon>-<yyyy>-<hh>-<mm>.json
+            const sanitize = (s) => (String(s || '')).replace(/[^0-9]/g, '') || 'unknown';
+            const callerFormatted = sanitize(callerNumber);
+            const calleeFormatted = sanitize(calleeNumber);
+            
+            const dd = String(callStartTime.getDate()).padStart(2, '0');
+            const mm = String(callStartTime.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const yyyy = callStartTime.getFullYear();
+            const hh = String(callStartTime.getHours()).padStart(2, '0');
+            const min = String(callStartTime.getMinutes()).padStart(2, '0');
+            
+            const filename = `call-${callerFormatted}-${calleeFormatted}-${dd}-${mm}-${yyyy}-${hh}-${min}.json`;
 
             const transcript = {
                 callId: streamSid,
