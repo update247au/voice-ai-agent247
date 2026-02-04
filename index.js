@@ -620,10 +620,10 @@ fastify.register(async (fastify) => {
                 });
 
                 // Log ALL event types to understand what's being received
-                console.log(`[ALL_EVENTS] Type: ${response.type}`);
+                console.log(`[EVENT] ${response.type}`);
 
                 if (LOG_EVENT_TYPES.includes(response.type)) {
-                    console.log(`Received event: ${response.type}`, response);
+                    console.log(`[EVENT_DETAIL] ${response.type}`, response);
                 }
 
                 // Handle function calls from AI
@@ -679,13 +679,17 @@ fastify.register(async (fastify) => {
 
                 // Detect when caller speech starts (from OpenAI Realtime API)
                 if (response.type === 'input_audio_buffer.speech_started') {
-                    console.log('[Speech Started] Caller is speaking - cancelling silence timer');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('[CALLER SPEAKING] Speech detected - cancelling silence timer');
+                    console.log('  silenceTimer exists:', !!silenceTimer);
+                    console.log('  waitingForCaller:', waitingForCaller);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     // Cancel silence timer when caller speaks
                     if (silenceTimer) {
                         clearTimeout(silenceTimer);
                         silenceTimer = null;
-                        console.log('[Silence Timer] Cancelled due to caller speech');
+                        console.log('[Silence Timer] ✓ Cancelled due to caller speech');
                     }
                     waitingForCaller = false;
                     silenceCount = 0; // Reset silence count when caller speaks
@@ -758,11 +762,9 @@ fastify.register(async (fastify) => {
                         });
                         console.log(`[Transcript] Assistant (from transcript.done): ${response.transcript}`);
                     }
-                }
-                
-                // When AI finishes speaking audio, start silence timer
-                if (response.type === 'response.audio.done' || response.type === 'response.audio_transcript.done') {
-                    console.log(`[${response.type}] AI finished audio output - starting 5s silence timer`);
+                }'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log(`[AI FINISHED AUDIO] ${response.type} - Starting silence timer`);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     // Clear any existing timer first
                     if (silenceTimer) {
@@ -772,16 +774,20 @@ fastify.register(async (fastify) => {
                     
                     waitingForCaller = true;
                     silenceTimer = setTimeout(() => {
-                        console.log('[Silence Timer] 5 seconds elapsed, triggering handleSilence');
+                        console.log('⏰⏰⏰ [TIMER FIRED] 5 seconds elapsed! ⏰⏰⏰');
                         handleSilence();
                     }, 5000); // 5 seconds
                     
-                    console.log('[Silence Timer] Timer started, waiting for caller response...');
+                    console.log('[Silence Timer] ✓ Timer started (5 seconds). Waiting for caller...');
                 }
                 
                 // Also try response.done as fallback
                 if (response.type === 'response.done') {
-                    console.log('[response.done] Response completed');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('[RESPONSE DONE] Response completed');
+                    console.log('  waitingForCaller:', waitingForCaller);
+                    console.log('  silenceTimer exists:', !!silenceTimer);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     // Only start timer if we haven't already started it from audio.done
                     if (!waitingForCaller) {
@@ -793,7 +799,13 @@ fastify.register(async (fastify) => {
                         
                         waitingForCaller = true;
                         silenceTimer = setTimeout(() => {
-                            console.log('[Silence Timer] 5 seconds elapsed (from response.done), triggering handleSilence');
+                            console.log('⏰⏰⏰ [TIMER FIRED from response.done] 5 seconds elapsed! ⏰⏰⏰');
+                            handleSilence();
+                        }, 5000);
+                        
+                        console.log('[Silence Timer] ✓ Timer started from response.done (5 seconds)');
+                    } else {
+                        console.log('[response.done] Timer already running, not starting anotheronse.done), triggering handleSilence');
                             handleSilence();
                         }, 5000);
                         
