@@ -284,6 +284,16 @@ fastify.register(async (fastify) => {
         current_state: 'A' // Track state machine progress (A-H)
     };
     
+    // Silence detection state
+    let silenceTimer = null;
+    let silenceCount = 0;
+    let waitingForCaller = false;
+    
+    // Silence detection state
+    let silenceTimer = null;
+    let silenceCount = 0;
+    let waitingForCaller = false;
+    
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
     let callerAudioChunks = [];  // Buffer audio base64 chunks during speech
@@ -552,12 +562,81 @@ fastify.register(async (fastify) => {
                 callerAudioChunks = [];  // Clear buffer after transcription
             }
         };
+        
+        // Handle silence after AI speaks - prompt AI to follow up
+        const handleSilence = () => {
+            if (!waitingForCaller) return;
+            
+            silenceCount = silenceCount + 1;
+            
+            let prompt = '';
+            
+            if (silenceCount === 1) {
+                prompt = "The caller did not respond. Repeat the question slowly and politely. Use simpler words.";
+            } else {
+                prompt = "The caller is still silent. Rephrase the question in a very simple way. Offer an alternative.";
+            }
+            
+            console.log(`[Silence Detected] Count: ${silenceCount}, sending prompt to AI`);
+            
+            // Send a conversation item to prompt the AI to follow up
+            const followUpMessage = {
+                type: 'conversation.item.create',
+                item: {
+                    type: 'message',
+                    role: 'user',
+                    content: [{
+                        type: 'input_text',
+                        text: prompt
+                    }]
+                }
+            };
+            
+            openAiWs.send(JSON.stringify(followUpMessage));
+            openAiWs.send(JSON.stringify({ type: 'response.create' }));
+        };
 
         // Open event for OpenAI WebSocket
         openAiWs.on('open', () => {
             console.log('Connected to the OpenAI Realtime API');
             setTimeout(initializeSession, 100);
         });
+        
+        // Handle silence after AI speaks
+        const handleSilence = (callSid) => {
+            const session = { callSid, waitingForCaller, silenceCount };
+            
+            if (!session.waitingForCaller) return;
+            
+            session.silenceCount = (session.silenceCount || 0) + 1;
+            silenceCount = session.silenceCount;
+            
+            let prompt = '';
+            
+            if (session.silenceCount === 1) {
+                prompt = "The caller did not respond. Repeat the question slowly and politely. Use simpler words.";
+            } else {
+                prompt = "The caller is still silent. Rephrase the question in a very simple way. Offer an alternative.";
+            }
+            
+            console.log(`[Silence Detected] Count: ${silenceCount}, sending prompt to AI`);
+            
+            // Send a conversation item to prompt the AI to follow up
+            const followUpMessage = {
+                type: 'conversation.item.create',
+                item: {
+                    type: 'message',
+                    role: 'user',
+                    content: [{
+                        type: 'input_text',
+                        text: prompt
+                    }]
+                }
+            };
+            
+            openAiWs.send(JSON.stringify(followUpMessage));
+            openAiWs.send(JSON.stringify({ type: 'response.create' }));
+        };
 
         // Listen for messages from the OpenAI WebSocket (and send to Twilio if necessary)
         openAiWs.on('message', async (data) => {
@@ -631,6 +710,13 @@ fastify.register(async (fastify) => {
 
                 // Detect when caller speech starts (from OpenAI Realtime API)
                 if (response.type === 'input_audio_buffer.speech_started') {
+                    // Cancel silence timer when caller speaks
+                    if (silenceTimer) {
+                        clearTimeout(silenceTimer);
+                        silenceTimer = null;
+                    }
+                    waitingForCaller = false;
+                    
                     if (!USE_REALTIME_TRANSCRIPTION) {
                         isCapturingCallerSpeech = true;
                         callerAudioChunks = [];
@@ -699,6 +785,15 @@ fastify.register(async (fastify) => {
                         });
                         console.log(`[Transcript] Assistant (from transcript.done): ${response.transcript}`);
                     }
+                }
+                
+                // When AI finishes speaking, start silence timer
+                if (response.type === 'response.done') {
+                    console.log('[Response Done] AI finished speaking, starting silence timer');
+                    waitingForCaller = true;
+                    silenceTimer = setTimeout(() => {
+                        handleSilence();
+                    }, 5000); // 5 seconds
                 }
 
 
