@@ -762,7 +762,11 @@ fastify.register(async (fastify) => {
                         });
                         console.log(`[Transcript] Assistant (from transcript.done): ${response.transcript}`);
                     }
-                }'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                }
+                
+                // When AI finishes speaking audio, start silence timer
+                if (response.type === 'response.audio.done' || response.type === 'response.audio_transcript.done') {
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     console.log(`[AI FINISHED AUDIO] ${response.type} - Starting silence timer`);
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
