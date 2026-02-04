@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { Storage } from '@google-cloud/storage';
 import FormData from 'form-data';
+import twilio from 'twilio';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -20,6 +21,17 @@ if (!fs.existsSync(CALL_HISTORY_DIR)) {
 const { OPENAI_API_KEY } = process.env;
 // Optional: GCS bucket name for transcript persistence. If not set, falls back to local files.
 const GCS_BUCKET = process.env.GCS_BUCKET || process.env.GOOGLE_CLOUD_BUCKET || null;
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || null;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || null;
+
+// Initialize Twilio client if credentials are available
+let twilioClient = null;
+if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+    twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    console.log('Twilio client initialized for call recording');
+} else {
+    console.log('Twilio credentials not set - call recording disabled');
+}
 
 // In-memory store for webhook bodies keyed by CallSid (or fallback key)
 const callMeta = {};
@@ -138,7 +150,7 @@ fastify.all('/incoming-call', async (request, reply) => {
                               <Say voice="Google.en-US-Chirp3-HD-Aoede">Connecting your call to Update 2 4 7</Say>
                               <Pause length="1"/>
                               <Say voice="Google.en-US-Chirp3-HD-Aoede"></Say>
-                              <Connect record="record-from-answer">
+                              <Connect>
                                   <Stream url="${streamUrlXml}">
                                       <Parameter name="from" value="${from}" />
                                       <Parameter name="to" value="${to}" />
@@ -658,6 +670,25 @@ fastify.register(async (fastify) => {
                             }
 
                             console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callee:', calleeNumber, 'callSid:', callSid);
+
+                        // Start call recording via Twilio API
+                        if (twilioClient && callSid) {
+                            try {
+                                twilioClient.calls(callSid)
+                                    .recordings
+                                    .create({ recordingChannels: 'dual' })
+                                    .then(recording => {
+                                        console.log('[Recording] Started recording:', recording.sid);
+                                    })
+                                    .catch(err => {
+                                        console.error('[Recording] Failed to start:', err.message);
+                                    });
+                            } catch (e) {
+                                console.error('[Recording] Error initiating recording:', e.message);
+                            }
+                        } else if (!callSid) {
+                            console.log('[Recording] No callSid available, cannot start recording');
+                        }
 
                         // Reset start and media timestamp on a new stream
                         responseStartTimestampTwilio = null;
