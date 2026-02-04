@@ -156,7 +156,7 @@ fastify.all('/incoming-call', async (request, reply) => {
     }
 });
 
-// WebSocket route for media-stream
+// WebSocket route for media-stream.
 fastify.register(async (fastify) => {
     fastify.get('/media-stream', { websocket: true }, (connection, req) => {
         console.log('Client connected');
