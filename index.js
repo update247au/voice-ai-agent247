@@ -404,7 +404,7 @@ fastify.register(async (fastify) => {
                     content: [
                         {
                             type: 'input_text',
-                            text: 'Greet the caller: "Hello, this is Update247. How may I help you today?" Then WAIT for their response. Do not ask another question until they speak.'
+                            text: 'Greet the user with : This is Rose from Update 2 4 7. How are you today?'
                         }
                     ]
                 }
