@@ -289,11 +289,6 @@ fastify.register(async (fastify) => {
     let silenceCount = 0;
     let waitingForCaller = false;
     
-    // Silence detection state
-    let silenceTimer = null;
-    let silenceCount = 0;
-    let waitingForCaller = false;
-    
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
     let callerAudioChunks = [];  // Buffer audio base64 chunks during speech
