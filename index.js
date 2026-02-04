@@ -389,6 +389,15 @@ fastify.register(async (fastify) => {
                                 },
                                 required: ["routing"]
                             }
+                        },
+                        {
+                            type: "function",
+                            name: "get_pricing_details",
+                            description: "Fetch current pricing details from the database when caller asks about pricing, plans, or costs.",
+                            parameters: {
+                                type: "object",
+                                properties: {}
+                            }
                         }
                     ],
                     tool_choice: "auto"
@@ -652,6 +661,43 @@ fastify.register(async (fastify) => {
                         };
                         openAiWs.send(JSON.stringify(functionOutput));
                         openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                    }
+                    
+                    if (functionName === 'get_pricing_details') {
+                        console.log('[Function Call] get_pricing_details - Fetching pricing from GCS...');
+                        
+                        try {
+                            // Fetch pricing file from GCS bucket
+                            const pricingFile = storage.bucket(GCS_BUCKET).file('pricing-details.json');
+                            const [pricingData] = await pricingFile.download();
+                            const pricingContent = pricingData.toString('utf-8');
+                            
+                            console.log('[Pricing] Successfully fetched from GCS');
+                            
+                            const functionOutput = {
+                                type: 'conversation.item.create',
+                                item: {
+                                    type: 'function_call_output',
+                                    call_id: response.call_id,
+                                    output: pricingContent
+                                }
+                            };
+                            openAiWs.send(JSON.stringify(functionOutput));
+                            openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                        } catch (error) {
+                            console.error('[Pricing] Failed to fetch pricing:', error.message);
+                            
+                            const errorOutput = {
+                                type: 'conversation.item.create',
+                                item: {
+                                    type: 'function_call_output',
+                                    call_id: response.call_id,
+                                    output: JSON.stringify({ error: 'Unable to retrieve pricing details. Please contact sales for current pricing.' })
+                                }
+                            };
+                            openAiWs.send(JSON.stringify(errorOutput));
+                            openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                        }
                     }
                 }
 
