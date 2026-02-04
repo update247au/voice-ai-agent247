@@ -728,12 +728,13 @@ fastify.register(async (fastify) => {
             const calleeFormatted = sanitize(calleeNumber);
             
             const dd = String(callStartTime.getDate()).padStart(2, '0');
-            const mm = String(callStartTime.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            const mon = monthNames[callStartTime.getMonth()];
             const yyyy = callStartTime.getFullYear();
             const hh = String(callStartTime.getHours()).padStart(2, '0');
             const min = String(callStartTime.getMinutes()).padStart(2, '0');
             
-            const filename = `call-${callerFormatted}-${calleeFormatted}-${dd}-${mm}-${yyyy}-${hh}-${min}.json`;
+            const filename = `call-from-${callerFormatted}-to-${calleeFormatted}-${dd}-${mon}-${yyyy}-${hh}-${min}.json`;
 
             const transcript = {
                 callId: streamSid,
