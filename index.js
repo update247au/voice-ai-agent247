@@ -178,6 +178,9 @@ const LOG_EVENT_TYPES = [
     'response.content.done',
     'rate_limits.updated',
     'response.done',
+    'response.audio.done',
+    'response.audio_transcript.done',
+    'response.output_audio.done',
     // transcription-related events (may vary by realtime API naming)
     'input_audio_transcript',
     'input_audio_transcription',
@@ -774,6 +777,28 @@ fastify.register(async (fastify) => {
                     }, 5000); // 5 seconds
                     
                     console.log('[Silence Timer] Timer started, waiting for caller response...');
+                }
+                
+                // Also try response.done as fallback
+                if (response.type === 'response.done') {
+                    console.log('[response.done] Response completed');
+                    
+                    // Only start timer if we haven't already started it from audio.done
+                    if (!waitingForCaller) {
+                        console.log('[response.done] Starting silence timer as fallback');
+                        
+                        if (silenceTimer) {
+                            clearTimeout(silenceTimer);
+                        }
+                        
+                        waitingForCaller = true;
+                        silenceTimer = setTimeout(() => {
+                            console.log('[Silence Timer] 5 seconds elapsed (from response.done), triggering handleSilence');
+                            handleSilence();
+                        }, 5000);
+                        
+                        console.log('[Silence Timer] Timer started from response.done');
+                    }
                 }
 
 
