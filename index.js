@@ -77,7 +77,7 @@ fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
 // Constants
-const SYSTEM_MESSAGE = 'You are the Support and sales specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support and sales staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only unless caller ask you to speak in another language. If caller ask you to speak in another language, you must speak in that language.';
+const SYSTEM_MESSAGE = 'You are the Support and sales specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support and sales staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only unless caller ask you to speak in another language. If caller ask you to speak in another language, you must speak in that language. IMPORTANT: Always collect the following information during the call: property name or ID, caller name, and their issue. Use the save_caller_info function to store this information as you learn it.';
 const VOICE = 'alloy';
 
 const TEMPERATURE = 0.4; // Controls the randomness of the AI's responsess
@@ -189,6 +189,15 @@ fastify.register(async (fastify) => {
     let currentResponseText = '';  // Accumulate text deltas
     let allEvents = [];  // Capture ALL events for debugging
     
+    // Slot-filling state: collect caller information during the call
+    let callState = {
+        property_id: null,
+        property_name: null,
+        caller_name: null,
+        caller_email: null,
+        issue_description: null
+    };
+    
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
     let callerAudioChunks = [];  // Buffer audio base64 chunks during speech
@@ -241,6 +250,24 @@ fastify.register(async (fastify) => {
                         output: { format: { type: 'audio/pcmu' }, voice: VOICE },
                     },
                     instructions: SYSTEM_MESSAGE,
+                    tools: [
+                        {
+                            type: "function",
+                            name: "save_caller_info",
+                            description: "Save caller information collected during the call. Call this function whenever you learn any caller details like property name/ID, caller name, email, or their issue.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    property_id: { type: "string", description: "Property ID if mentioned" },
+                                    property_name: { type: "string", description: "Property name if mentioned" },
+                                    caller_name: { type: "string", description: "Caller's name" },
+                                    caller_email: { type: "string", description: "Caller's email address" },
+                                    issue_description: { type: "string", description: "Brief description of their issue or question" }
+                                }
+                            }
+                        }
+                    ],
+                    tool_choice: "auto"
                 },
             };
 
@@ -444,6 +471,37 @@ fastify.register(async (fastify) => {
 
                 if (LOG_EVENT_TYPES.includes(response.type)) {
                     console.log(`Received event: ${response.type}`, response);
+                }
+
+                // Handle function calls from AI
+                if (response.type === 'response.function_call_arguments.done') {
+                    const functionName = response.name;
+                    const args = JSON.parse(response.arguments || '{}');
+                    
+                    console.log(`[Function Call] ${functionName}`, args);
+                    
+                    if (functionName === 'save_caller_info') {
+                        // Update callState with provided information
+                        if (args.property_id) callState.property_id = args.property_id;
+                        if (args.property_name) callState.property_name = args.property_name;
+                        if (args.caller_name) callState.caller_name = args.caller_name;
+                        if (args.caller_email) callState.caller_email = args.caller_email;
+                        if (args.issue_description) callState.issue_description = args.issue_description;
+                        
+                        console.log('[CallState Updated]', callState);
+                        
+                        // Send function result back to AI
+                        const functionOutput = {
+                            type: 'conversation.item.create',
+                            item: {
+                                type: 'function_call_output',
+                                call_id: response.call_id,
+                                output: JSON.stringify({ success: true, saved: args })
+                            }
+                        };
+                        openAiWs.send(JSON.stringify(functionOutput));
+                        openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                    }
                 }
 
                 // Detect when caller speech starts (from OpenAI Realtime API)
@@ -719,6 +777,15 @@ fastify.register(async (fastify) => {
         const saveTranscript = async () => {
             console.log(`[saveTranscript] Called. conversationLog length: ${conversationLog.length}, GCS_BUCKET: ${GCS_BUCKET}`);
             
+            console.log('═══════════════════════════════════════════');
+            console.log('[Call Summary] Collected Caller Information:');
+            console.log('  Property ID:', callState.property_id || 'Not provided');
+            console.log('  Property Name:', callState.property_name || 'Not provided');
+            console.log('  Caller Name:', callState.caller_name || 'Not provided');
+            console.log('  Caller Email:', callState.caller_email || 'Not provided');
+            console.log('  Issue:', callState.issue_description || 'Not provided');
+            console.log('═══════════════════════════════════════════');
+            
             // Extract numbers from webhookBody if not already set
             if (!callerNumber && webhookBody) {
                 callerNumber = webhookBody.From || webhookBody.from || null;
@@ -753,6 +820,7 @@ fastify.register(async (fastify) => {
                 recordingSid: recordingSid,
                 callerNumber: callerNumber,
                 calleeNumber: calleeNumber,
+                callState: callState,
                 webhookBody: webhookBody || null,
                 startTime: callStartTime.toISOString(),
                 endTime: callEndTime.toISOString(),
