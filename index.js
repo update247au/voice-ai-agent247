@@ -603,42 +603,6 @@ fastify.register(async (fastify) => {
             console.log('Connected to the OpenAI Realtime API');
             setTimeout(initializeSession, 100);
         });
-        
-        // Handle silence after AI speaks
-        const handleSilence = (callSid) => {
-            const session = { callSid, waitingForCaller, silenceCount };
-            
-            if (!session.waitingForCaller) return;
-            
-            session.silenceCount = (session.silenceCount || 0) + 1;
-            silenceCount = session.silenceCount;
-            
-            let prompt = '';
-            
-            if (session.silenceCount === 1) {
-                prompt = "The caller did not respond. Repeat the question slowly and politely. Use simpler words.";
-            } else {
-                prompt = "The caller is still silent. Rephrase the question in a very simple way. Offer an alternative.";
-            }
-            
-            console.log(`[Silence Detected] Count: ${silenceCount}, sending prompt to AI`);
-            
-            // Send a conversation item to prompt the AI to follow up
-            const followUpMessage = {
-                type: 'conversation.item.create',
-                item: {
-                    type: 'message',
-                    role: 'user',
-                    content: [{
-                        type: 'input_text',
-                        text: prompt
-                    }]
-                }
-            };
-            
-            openAiWs.send(JSON.stringify(followUpMessage));
-            openAiWs.send(JSON.stringify({ type: 'response.create' }));
-        };
 
         // Listen for messages from the OpenAI WebSocket (and send to Twilio if necessary)
         openAiWs.on('message', async (data) => {
