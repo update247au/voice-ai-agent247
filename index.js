@@ -343,7 +343,7 @@ fastify.register(async (fastify) => {
                     model: "gpt-realtime",
                     output_modalities: ["audio"],
                     audio: {
-                        input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
+                        input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "none" } },
                         output: { format: { type: 'audio/pcmu' }, voice: VOICE },
                     },
                     instructions: SYSTEM_MESSAGE,
@@ -785,15 +785,8 @@ fastify.register(async (fastify) => {
 
                 // When user's speech is committed, request OpenAI to create a conversation item from it
                 if (response.type === 'input_audio_buffer.committed') {
-                    console.log('[input_audio_buffer.committed] Requesting conversation item creation...');
-                    if (callerSpokeSinceLastResponse && openAiWs.readyState === WebSocket.OPEN) {
-                        openAiWs.send(JSON.stringify({
-                            type: 'response.create'
-                        }));
-                        callerSpokeSinceLastResponse = false;
-                    } else {
-                        console.log('[input_audio_buffer.committed] No caller speech detected for this turn; skipping response.create');
-                    }
+                    console.log('[input_audio_buffer.committed] Speech buffer committed - waiting for actual speech recognition');
+                    // Don't auto-generate response here - wait for actual speech
                 }
             } catch (error) {
                 console.error('Error processing OpenAI message:', error, 'Raw message:', data);
