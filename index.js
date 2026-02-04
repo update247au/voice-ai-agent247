@@ -220,16 +220,14 @@ fastify.register(async (fastify) => {
             const sessionUpdate = {
                 type: 'session.update',
                 session: {
-                    type: 'realtime',
-                    model: "gpt-realtime",
-                    output_modalities: ["audio"],
+                    modalities: ["text", "audio"],
+                    instructions: SYSTEM_MESSAGE,
                     voice: VOICE,
                     input_audio_format: "g711_ulaw",
                     output_audio_format: "g711_ulaw",
-                    input_audio_transcription: { model: 'gpt-4o-transcribe' },
-                    turn_detection: { type: "server_vad" },
-                    instructions: SYSTEM_MESSAGE
-                },
+                    input_audio_transcription: { model: "whisper-1" },
+                    turn_detection: { type: "server_vad" }
+                }
             };
 
             console.log('Sending session update:', JSON.stringify(sessionUpdate));
