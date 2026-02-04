@@ -222,9 +222,10 @@ fastify.register(async (fastify) => {
                 session: {
                     instructions: SYSTEM_MESSAGE,
                     voice: VOICE,
-                    turn_detection: { type: "server_vad" },
-                    input_audio_format: "g711_ulaw",
-                    output_audio_format: "g711_ulaw"
+                    audio: {
+                        input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
+                        output: { format: { type: 'audio/pcmu' }, voice: VOICE }
+                    }
                 }
             };
 
