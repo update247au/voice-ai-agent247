@@ -343,7 +343,7 @@ fastify.register(async (fastify) => {
                     model: "gpt-realtime",
                     output_modalities: ["audio"],
                     audio: {
-                        input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "none" } },
+                        input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
                         output: { format: { type: 'audio/pcmu' }, voice: VOICE },
                     },
                     instructions: SYSTEM_MESSAGE,
@@ -390,7 +390,7 @@ fastify.register(async (fastify) => {
             console.log('Sending session update:', JSON.stringify(sessionUpdate));
             openAiWs.send(JSON.stringify(sessionUpdate));
 
-            // Uncomment the following line to have AI speak first :
+            // Send initial greeting - AI speaks first
             sendInitialConversationItem();
         };
 
