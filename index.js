@@ -809,11 +809,7 @@ fastify.register(async (fastify) => {
                         
                         console.log('[Silence Timer] ✓ Timer started from response.done (5 seconds)');
                     } else {
-                        console.log('[response.done] Timer already running, not starting anotheronse.done), triggering handleSilence');
-                            handleSilence();
-                        }, 5000);
-                        
-                        console.log('[Silence Timer] Timer started from response.done');
+                        console.log('[response.done] Timer already running, not starting another');
                     }
                 }
 
