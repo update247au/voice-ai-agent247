@@ -220,12 +220,11 @@ fastify.register(async (fastify) => {
             const sessionUpdate = {
                 type: 'session.update',
                 session: {
-                    modalities: ["text", "audio"],
                     instructions: SYSTEM_MESSAGE,
                     voice: VOICE,
+                    turn_detection: { type: "server_vad" },
                     input_audio_format: "g711_ulaw",
-                    output_audio_format: "g711_ulaw",
-                    turn_detection: { type: "server_vad" }
+                    output_audio_format: "g711_ulaw"
                 }
             };
 
