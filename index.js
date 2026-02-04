@@ -69,7 +69,7 @@ const SYSTEM_MESSAGE = 'You are the Support and sales specialist for Update247 C
 const VOICE = 'alloy';
 
 const TEMPERATURE = 0.4; // Controls the randomness of the AI's responsess
-const USE_REALTIME_TRANSCRIPTION = true;
+const USE_REALTIME_TRANSCRIPTION = false;
 //const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
 
 
@@ -505,17 +505,11 @@ fastify.register(async (fastify) => {
 
 
                 if (response.type === 'response.output_audio.delta' && response.delta) {
-                    // Debug: log first 30 chars of OpenAI audio delta and Twilio payload
-                    const delta = response.delta;
-                    console.log("OpenAI audio delta (first 30):", delta.slice(0, 30));
                     const audioDelta = {
                         event: 'media',
                         streamSid: streamSid,
-                        media: { payload: delta }
+                        media: { payload: response.delta }
                     };
-                    const payload = audioDelta.media.payload;
-                    console.log("Sending to Twilio (first 30):", payload.slice(0, 30));
-
                     connection.send(JSON.stringify(audioDelta));
 
                     // First delta from a new response starts the elapsed time counter
