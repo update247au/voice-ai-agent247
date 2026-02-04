@@ -77,7 +77,67 @@ fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
 // Constants
-const SYSTEM_MESSAGE = 'You are the Support and sales specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support and sales staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only unless caller ask you to speak in another language. If caller ask you to speak in another language, you must speak in that language. IMPORTANT: Always collect the following information during the call: property name or ID, caller name, and their issue. Use the save_caller_info function to store this information as you learn it.';
+const SYSTEM_MESSAGE = `You are the Support and sales specialist for Update247 Channel Manager. Your purpose is to act as a knowledgeable and friendly support and sales staff member, assisting accommodation providers with questions, guidance, and basic troubleshooting. Website: https://www.update247.com.au/ Responsibilities: Explain Update247 benefits (real-time sync, preventing overbookings); Guide users on managing rates, availability, and OTA connections; Troubleshoot sync issues. Tone: Professional, friendly, and supportive. LANGUAGE: You must ALWAYS speak and respond in English only unless caller ask you to speak in another language. If caller ask you to speak in another language, you must speak in that language
+
+GOAL:
+1) Identify the caller and their property (Property ID + Property Name).
+2) Determine if they are an existing client.
+3) Route the call to Support (existing client) or Sales (not a client).
+
+RULES:
+- Follow the FLOW strictly.
+- Ask ONE question at a time.
+- If the caller gives partial info, ask for the missing piece.
+- Always repeat key details back for confirmation.
+- Do not proceed to the next step until the current step is complete.
+- If caller refuses to share details, continue politely with what you have.
+- Use save_caller_info function to store collected data as you learn it.
+- Use route_call function when you determine whether caller needs Support or Sales.
+
+FLOW (state machine):
+
+STATE A — COLLECT PROPERTY ID
+- Ask: "Can I please have your property ID?"
+- If provided -> save it -> go to STATE B.
+- If not provided -> ask: "No problem — what's the property name?" -> go to STATE C.
+
+STATE B — CONFIRM PROPERTY ID
+- Say: "Thanks. Just confirming, property ID is <ID>. Is that correct?"
+- If yes -> go to STATE D.
+- If no -> ask again for property ID -> stay in STATE A.
+
+STATE C — COLLECT PROPERTY NAME
+- Ask: "What is the property name?"
+- If provided -> save it -> go to STATE E.
+- If not provided -> ask again once. If still missing -> go to STATE F (general triage).
+
+STATE D — CHECK CLIENT STATUS
+- Ask: "Are you currently using Update247?"
+- If yes -> go to STATE G (Support).
+- If no -> go to STATE H (Sales).
+- If unsure -> ask: "Did you ever have an Update247 login before?" then decide.
+
+STATE E — CHECK CLIENT STATUS (NO ID PATH)
+- Ask: "Are you currently using Update247?"
+- If yes -> go to STATE G (Support) and ask for property ID later if needed.
+- If no -> go to STATE H (Sales).
+
+STATE F — GENERAL TRIAGE (MISSING DETAILS)
+- Ask: "Are you calling for help with an existing Update247 account, or are you looking to start using Update247?"
+- If existing -> STATE G.
+- If new -> STATE H.
+
+STATE G — SUPPORT MODE
+- Be a support agent.
+- Ask: "What issue can I help with today?"
+- If account lookup needed and missing ID -> ask for property ID again.
+
+STATE H — SALES MODE
+- Be a sales agent.
+- Ask: "Which channel manager / booking system are you using now, and how many properties do you manage?"
+- Offer next step: demo / pricing / onboarding.
+
+LANGUAGE: Always speak English unless caller requests another language.`;
 const VOICE = 'alloy';
 
 const TEMPERATURE = 0.4; // Controls the randomness of the AI's responsess
@@ -195,7 +255,10 @@ fastify.register(async (fastify) => {
         property_name: null,
         caller_name: null,
         caller_email: null,
-        issue_description: null
+        issue_description: null,
+        is_existing_client: null,
+        routing: null, // 'support' or 'sales'
+        current_state: 'A' // Track state machine progress (A-H)
     };
     
     // For caller speech transcription via Whisper API
@@ -262,8 +325,27 @@ fastify.register(async (fastify) => {
                                     property_name: { type: "string", description: "Property name if mentioned" },
                                     caller_name: { type: "string", description: "Caller's name" },
                                     caller_email: { type: "string", description: "Caller's email address" },
-                                    issue_description: { type: "string", description: "Brief description of their issue or question" }
+                                    issue_description: { type: "string", description: "Brief description of their issue or question" },
+                                    is_existing_client: { type: "boolean", description: "Whether caller is an existing Update247 client" },
+                                    current_state: { type: "string", description: "Current state in the flow (A-H)" }
                                 }
+                            }
+                        },
+                        {
+                            type: "function",
+                            name: "route_call",
+                            description: "Record the routing decision once you've determined whether to route to Support or Sales.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    routing: { 
+                                        type: "string", 
+                                        enum: ["support", "sales"],
+                                        description: "Route to 'support' for existing clients or 'sales' for new prospects" 
+                                    },
+                                    reason: { type: "string", description: "Brief reason for routing decision" }
+                                },
+                                required: ["routing"]
                             }
                         }
                     ],
@@ -487,6 +569,8 @@ fastify.register(async (fastify) => {
                         if (args.caller_name) callState.caller_name = args.caller_name;
                         if (args.caller_email) callState.caller_email = args.caller_email;
                         if (args.issue_description) callState.issue_description = args.issue_description;
+                        if (args.is_existing_client !== undefined) callState.is_existing_client = args.is_existing_client;
+                        if (args.current_state) callState.current_state = args.current_state;
                         
                         console.log('[CallState Updated]', callState);
                         
@@ -497,6 +581,24 @@ fastify.register(async (fastify) => {
                                 type: 'function_call_output',
                                 call_id: response.call_id,
                                 output: JSON.stringify({ success: true, saved: args })
+                            }
+                        };
+                        openAiWs.send(JSON.stringify(functionOutput));
+                        openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                    }
+                    
+                    if (functionName === 'route_call') {
+                        // Record routing decision
+                        callState.routing = args.routing;
+                        console.log(`[ROUTING DECISION] ${args.routing.toUpperCase()} - Reason: ${args.reason || 'Not specified'}`);
+                        
+                        // Send function result back to AI
+                        const functionOutput = {
+                            type: 'conversation.item.create',
+                            item: {
+                                type: 'function_call_output',
+                                call_id: response.call_id,
+                                output: JSON.stringify({ success: true, routed_to: args.routing })
                             }
                         };
                         openAiWs.send(JSON.stringify(functionOutput));
@@ -784,6 +886,9 @@ fastify.register(async (fastify) => {
             console.log('  Caller Name:', callState.caller_name || 'Not provided');
             console.log('  Caller Email:', callState.caller_email || 'Not provided');
             console.log('  Issue:', callState.issue_description || 'Not provided');
+            console.log('  Existing Client:', callState.is_existing_client !== null ? (callState.is_existing_client ? 'Yes' : 'No') : 'Not determined');
+            console.log('  Routed To:', callState.routing ? callState.routing.toUpperCase() : 'Not routed');
+            console.log('  Final State:', callState.current_state);
             console.log('═══════════════════════════════════════════');
             
             // Extract numbers from webhookBody if not already set
