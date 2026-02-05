@@ -195,13 +195,19 @@ May I please have your property ID?"`;
         const settings = JSON.parse(fileContent.toString('utf-8'));
         
         console.log('✓ Loaded agent settings from GCS: gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json');
+        console.log('  - voice:', settings.voice);
+        console.log('  - temperature:', settings.temperature);
+        console.log('  - system_message length:', settings.system_message ? settings.system_message.length : 'undefined');
         
-        return {
+        const finalSettings = {
             system_message: settings.system_message || DEFAULT_SYSTEM_MESSAGE,
             voice: settings.voice || 'sage',
             temperature: settings.temperature !== undefined ? settings.temperature : 0.2,
             use_realtime_transcription: settings.use_realtime_transcription || false
         };
+        
+        console.log('✓ Final settings to use - system_message length:', finalSettings.system_message.length);
+        return finalSettings;
     } catch (error) {
         console.error('✗ Error loading agent settings from GCS:', error.message);
         console.log('  Falling back to default system message.');
@@ -418,7 +424,10 @@ fastify.register(async (fastify) => {
         
         // Load fresh settings from GCS for this call
         const callSettings = await loadAgentSettings();
-        console.log('✓ Loaded settings for this call. Voice:', callSettings.voice);
+        console.log('✓ Loaded settings for this call:');
+        console.log('  - Voice:', callSettings.voice);
+        console.log('  - System message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined');
+        console.log('  - Temperature:', callSettings.temperature);
 
         // Connection-specific state
         let streamSid = null;
@@ -497,6 +506,7 @@ fastify.register(async (fastify) => {
 
         // Control initial session with OpenAI
         const initializeSession = () => {
+            console.log('[initializeSession] Using system_message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined', 'voice:', callSettings.voice);
             const sessionUpdate = {
                 type: 'session.update',
                 session: {
