@@ -564,13 +564,10 @@ fastify.register(async (fastify) => {
                         {
                             type: "function",
                             name: "get_pricing_details",
-                            description: "Fetch current pricing and rates for a property. Call this when caller asks about pricing, rates, room types, or costs.",
+                            description: "Fetch current pricing details from the database when caller asks about pricing, plans, or costs.",
                             parameters: {
                                 type: "object",
-                                properties: {
-                                    property_id: { type: "string", description: "Property ID to fetch rates for" }
-                                },
-                                required: ["property_id"]
+                                properties: {}
                             }
                         }
                     ],
@@ -848,27 +845,22 @@ fastify.register(async (fastify) => {
                     }
                     
                     if (functionName === 'get_pricing_details') {
-                        const propertyId = args.property_id || 'unknown';
-                        console.log('[Function Call] get_pricing_details - Fetching rates for property:', propertyId);
+                        console.log('[Function Call] get_pricing_details - Fetching pricing from GCS...');
                         
                         try {
-                            // Call mock rates endpoint
-                            const ratesUrl = 'https://localhost/aiagent247/speech-assistant-openai-realtime-api-node/mock_rates.php';
-                            const ratesResponse = await fetch(ratesUrl);
+                            // Fetch pricing file from GCS bucket
+                            const pricingFile = storage.bucket(GCS_BUCKET).file('pricing-details.json');
+                            const [pricingData] = await pricingFile.download();
+                            const pricingContent = pricingData.toString('utf-8');
                             
-                            if (!ratesResponse.ok) {
-                                throw new Error(`HTTP ${ratesResponse.status}: ${ratesResponse.statusText}`);
-                            }
-                            
-                            const ratesData = await ratesResponse.json();
-                            console.log('[Pricing] Successfully fetched rates for property', propertyId);
+                            console.log('[Pricing] Successfully fetched from GCS');
                             
                             const functionOutput = {
                                 type: 'conversation.item.create',
                                 item: {
                                     type: 'function_call_output',
                                     call_id: response.call_id,
-                                    output: JSON.stringify(ratesData)
+                                    output: pricingContent
                                 }
                             };
                             openAiWs.send(JSON.stringify(functionOutput));
@@ -881,7 +873,7 @@ fastify.register(async (fastify) => {
                                 item: {
                                     type: 'function_call_output',
                                     call_id: response.call_id,
-                                    output: JSON.stringify({ error: 'Unable to retrieve pricing details. Please contact sales for current pricing.', details: error.message })
+                                    output: JSON.stringify({ error: 'Unable to retrieve pricing details. Please contact sales for current pricing.' })
                                 }
                             };
                             openAiWs.send(JSON.stringify(errorOutput));
