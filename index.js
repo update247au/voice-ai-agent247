@@ -583,6 +583,7 @@ fastify.register(async (fastify) => {
 
         // Send initial conversation item if AI talks first
         const sendInitialConversationItem = () => {
+            console.log('[sendInitialConversationItem] Sending initial greeting to OpenAI');
             const initialConversationItem = {
                 type: 'conversation.item.create',
                 item: {
@@ -978,6 +979,7 @@ fastify.register(async (fastify) => {
                 if (response.type === 'response.output_audio.delta' && response.delta) {
                     if (!streamSid) {
                         pendingAudioDeltas.push(response.delta);
+                        console.log('[audio.delta] Buffered (no streamSid). Pending count:', pendingAudioDeltas.length);
                         return;
                     }
                     const audioDelta = {
@@ -986,6 +988,7 @@ fastify.register(async (fastify) => {
                         media: { payload: response.delta }
                     };
                     connection.send(JSON.stringify(audioDelta));
+                    if (SHOW_TIMING_MATH) console.log('[audio.delta] Forwarded to Twilio. streamSid:', streamSid, 'payload bytes:', response.delta.length);
 
                     // First delta from a new response starts the elapsed time counter
                     if (!responseStartTimestampTwilio) {
@@ -1104,6 +1107,7 @@ fastify.register(async (fastify) => {
 
                             // Flush any pending audio deltas now that streamSid is available
                             if (pendingAudioDeltas.length > 0) {
+                                console.log('[audio.delta] Flushing pending audio. Count:', pendingAudioDeltas.length, 'streamSid:', streamSid);
                                 pendingAudioDeltas.forEach((delta) => {
                                     const audioDelta = {
                                         event: 'media',
