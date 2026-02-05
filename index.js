@@ -437,6 +437,7 @@ fastify.register(async (fastify) => {
         let responseStartTimestampTwilio = null;
         let sessionInitialized = false;
         let shouldSendInitialGreeting = true;
+        let pendingAudioDeltas = [];
         let callerNumber = null; // Caller phone number (if provided by Twilio)
         let calleeNumber = null; // Called/destination phone number (if provided by Twilio)
         let callSid = null; // Twilio call SID (if provided)
@@ -975,6 +976,10 @@ fastify.register(async (fastify) => {
 
 
                 if (response.type === 'response.output_audio.delta' && response.delta) {
+                    if (!streamSid) {
+                        pendingAudioDeltas.push(response.delta);
+                        return;
+                    }
                     const audioDelta = {
                         event: 'media',
                         streamSid: streamSid,
@@ -1096,6 +1101,19 @@ fastify.register(async (fastify) => {
                             }
 
                             console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callee:', calleeNumber, 'callSid:', callSid);
+
+                            // Flush any pending audio deltas now that streamSid is available
+                            if (pendingAudioDeltas.length > 0) {
+                                pendingAudioDeltas.forEach((delta) => {
+                                    const audioDelta = {
+                                        event: 'media',
+                                        streamSid: streamSid,
+                                        media: { payload: delta }
+                                    };
+                                    connection.send(JSON.stringify(audioDelta));
+                                });
+                                pendingAudioDeltas = [];
+                            }
 
                             // If session is ready, send initial greeting now that streamSid is available
                             if (sessionInitialized && shouldSendInitialGreeting) {
