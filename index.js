@@ -573,11 +573,15 @@ fastify.register(async (fastify) => {
             console.log('Sending session update:', JSON.stringify(sessionUpdate));
             openAiWs.send(JSON.stringify(sessionUpdate));
             sessionInitialized = true;
+            console.log('[initializeSession] Session initialized. streamSid:', streamSid, 'shouldSendInitialGreeting:', shouldSendInitialGreeting);
 
             // Send initial greeting only after streamSid is available
             if (streamSid && shouldSendInitialGreeting) {
+                console.log('[initializeSession] Conditions met. Calling sendInitialConversationItem now.');
                 shouldSendInitialGreeting = false;
                 sendInitialConversationItem();
+            } else {
+                console.log('[initializeSession] NOT calling sendInitialConversationItem. streamSid:', streamSid, 'shouldSendInitialGreeting:', shouldSendInitialGreeting);
             }
         };
 
@@ -762,6 +766,7 @@ fastify.register(async (fastify) => {
         // Open event for OpenAI WebSocket
         openAiWs.on('open', () => {
             console.log('Connected to the OpenAI Realtime API');
+            console.log('[DEBUG] streamSid at OpenAI connect:', streamSid, 'sessionInitialized:', sessionInitialized, 'shouldSendInitialGreeting:', shouldSendInitialGreeting);
             setTimeout(initializeSession, 100);
         });
 
@@ -1104,6 +1109,7 @@ fastify.register(async (fastify) => {
                             }
 
                             console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callee:', calleeNumber, 'callSid:', callSid);
+                            console.log('[start event] sessionInitialized:', sessionInitialized, 'shouldSendInitialGreeting:', shouldSendInitialGreeting);
 
                             // Flush any pending audio deltas now that streamSid is available
                             if (pendingAudioDeltas.length > 0) {
@@ -1121,8 +1127,11 @@ fastify.register(async (fastify) => {
 
                             // If session is ready, send initial greeting now that streamSid is available
                             if (sessionInitialized && shouldSendInitialGreeting) {
+                                console.log('[start event] Conditions met. Calling sendInitialConversationItem now.');
                                 shouldSendInitialGreeting = false;
                                 sendInitialConversationItem();
+                            } else {
+                                console.log('[start event] NOT calling sendInitialConversationItem. sessionInitialized:', sessionInitialized, 'shouldSendInitialGreeting:', shouldSendInitialGreeting);
                             }
 
                         // Start call recording via Twilio API
