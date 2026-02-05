@@ -426,7 +426,15 @@ fastify.register(async (fastify) => {
         let callSettings;
         try {
             console.log('[Settings] Loading agent settings...');
-            callSettings = await loadAgentSettings();
+            
+            // Add timeout to prevent hanging
+            const settingsPromise = loadAgentSettings();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Settings loading timeout after 5s')), 5000)
+            );
+            
+            callSettings = await Promise.race([settingsPromise, timeoutPromise]);
+            
             console.log('✓ Loaded settings for this call:');
             console.log('  - Voice:', callSettings.voice);
             console.log('  - System message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined');
