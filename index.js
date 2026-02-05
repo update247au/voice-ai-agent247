@@ -422,35 +422,17 @@ fastify.register(async (fastify) => {
     fastify.get('/media-stream', { websocket: true }, async (connection, req) => {
         console.log('Client connected');
         
-        // Load fresh settings from GCS for this call
-        let callSettings;
-        try {
-            console.log('[Settings] Loading agent settings...');
-            
-            // Add timeout to prevent hanging
-            const settingsPromise = loadAgentSettings();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Settings loading timeout after 5s')), 5000)
-            );
-            
-            callSettings = await Promise.race([settingsPromise, timeoutPromise]);
-            
-            console.log('✓ Loaded settings for this call:');
-            console.log('  - Voice:', callSettings.voice);
-            console.log('  - System message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined');
-            console.log('  - Temperature:', callSettings.temperature);
-        } catch (error) {
-            console.error('[Settings] FAILED to load settings:', error.message);
-            console.error('[Settings] Stack:', error.stack);
-            // Use fallback settings if loading fails
-            callSettings = AGENT_SETTINGS || {
-                system_message: 'You are a helpful AI assistant.',
-                voice: 'sage',
-                temperature: 0.2,
-                use_realtime_transcription: false
-            };
-            console.log('[Settings] Using fallback settings');
-        }
+        // Use settings loaded at startup (AGENT_SETTINGS is already loaded)
+        const callSettings = AGENT_SETTINGS || {
+            system_message: 'You are a helpful AI assistant.',
+            voice: 'sage',
+            temperature: 0.2,
+            use_realtime_transcription: false
+        };
+        console.log('✓ Using agent settings:');
+        console.log('  - Voice:', callSettings.voice);
+        console.log('  - System message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined');
+        console.log('  - Temperature:', callSettings.temperature);
 
         // Connection-specific state
         let streamSid = null;
