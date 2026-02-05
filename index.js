@@ -435,6 +435,8 @@ fastify.register(async (fastify) => {
         let lastAssistantItem = null;
         let markQueue = [];
         let responseStartTimestampTwilio = null;
+        let sessionInitialized = false;
+        let shouldSendInitialGreeting = true;
         let callerNumber = null; // Caller phone number (if provided by Twilio)
         let calleeNumber = null; // Called/destination phone number (if provided by Twilio)
         let callSid = null; // Twilio call SID (if provided)
@@ -569,9 +571,13 @@ fastify.register(async (fastify) => {
 
             console.log('Sending session update:', JSON.stringify(sessionUpdate));
             openAiWs.send(JSON.stringify(sessionUpdate));
+            sessionInitialized = true;
 
-            // Send initial greeting - AI speaks first
-            sendInitialConversationItem();
+            // Send initial greeting only after streamSid is available
+            if (streamSid && shouldSendInitialGreeting) {
+                shouldSendInitialGreeting = false;
+                sendInitialConversationItem();
+            }
         };
 
         // Send initial conversation item if AI talks first
@@ -1090,6 +1096,12 @@ fastify.register(async (fastify) => {
                             }
 
                             console.log('Incoming stream has started', streamSid, 'caller:', callerNumber, 'callee:', calleeNumber, 'callSid:', callSid);
+
+                            // If session is ready, send initial greeting now that streamSid is available
+                            if (sessionInitialized && shouldSendInitialGreeting) {
+                                shouldSendInitialGreeting = false;
+                                sendInitialConversationItem();
+                            }
 
                         // Start call recording via Twilio API
                         if (twilioClient && callSid) {
