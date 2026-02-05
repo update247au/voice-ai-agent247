@@ -423,11 +423,26 @@ fastify.register(async (fastify) => {
         console.log('Client connected');
         
         // Load fresh settings from GCS for this call
-        const callSettings = await loadAgentSettings();
-        console.log('✓ Loaded settings for this call:');
-        console.log('  - Voice:', callSettings.voice);
-        console.log('  - System message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined');
-        console.log('  - Temperature:', callSettings.temperature);
+        let callSettings;
+        try {
+            console.log('[Settings] Loading agent settings...');
+            callSettings = await loadAgentSettings();
+            console.log('✓ Loaded settings for this call:');
+            console.log('  - Voice:', callSettings.voice);
+            console.log('  - System message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined');
+            console.log('  - Temperature:', callSettings.temperature);
+        } catch (error) {
+            console.error('[Settings] FAILED to load settings:', error.message);
+            console.error('[Settings] Stack:', error.stack);
+            // Use fallback settings if loading fails
+            callSettings = AGENT_SETTINGS || {
+                system_message: 'You are a helpful AI assistant.',
+                voice: 'sage',
+                temperature: 0.2,
+                use_realtime_transcription: false
+            };
+            console.log('[Settings] Using fallback settings');
+        }
 
         // Connection-specific state
         let streamSid = null;
@@ -1033,6 +1048,7 @@ fastify.register(async (fastify) => {
         connection.on('message', (message) => {
             try {
                 const data = JSON.parse(message);
+                console.log('[Twilio WebSocket] Received event:', data.event);
 
                 switch (data.event) {
                     case 'media':
