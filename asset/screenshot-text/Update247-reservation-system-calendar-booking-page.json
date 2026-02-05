@@ -1,0 +1,309 @@
+{
+  "image_description": {
+    "page_title": "Update247 Reservation System - Calendar & Booking Management",
+    "system_name": "Update247 Reservation System",
+    "page_type": "Calendar View with Room Inventory & Bookings",
+    "property_sample": "The Blue Lake Hotel (CTL)",
+    "purpose": "Visual calendar-based room booking and guest management interface",
+    "location": "update247.com.au/reservation_system/calendar",
+    "date_range": {
+      "display_period": "February 2026",
+      "calendar_view": "6 Feb onwards"
+    },
+    "top_navigation_bar": {
+      "left_section": [
+        "Property selector: The Blue Lake Hotel CTL",
+        "Date navigation arrows",
+        "Calendar toggle"
+      ],
+      "center_section": [
+        "Search by guest/email",
+        "LN or Email field",
+        "Status indicators"
+      ],
+      "right_section": [
+        "Search functionality",
+        "Dashboard",
+        "Housekeeping",
+        "Trading",
+        "Calendar",
+        "Inbox",
+        "Rates",
+        "Booking",
+        "Invoice",
+        "U247 Integration",
+        "APPS"
+      ]
+    },
+    "main_interface": {
+      "layout": "Dual-panel layout - Calendar on left, Booking details on right",
+      "left_panel": {
+        "type": "Room Inventory Calendar View",
+        "header_columns": [
+          "Room Code",
+          "Room Type",
+          "Occupancy %",
+          "Dates",
+          "Guest Names",
+          "Booking Status"
+        ],
+        "displayed_data": "Room-by-room booking calendar showing guest names and dates"
+      },
+      "right_panel": {
+        "type": "Booking Details Sidebar",
+        "sections": [
+          "Guest search/filter",
+          "Upcoming bookings",
+          "Guest contact information",
+          "Booking status",
+          "Dates in/out",
+          "Total booking value"
+        ]
+      }
+    },
+    "room_inventory_details": {
+      "room_type_categories": [
+        {
+          "category": "Standard Triple",
+          "room_codes": [
+            "ST - 01",
+            "ST - 02",
+            "ST - 03",
+            "ST - 04",
+            "ST - 05",
+            "ST - 06",
+            "ST - 07",
+            "ST - 08"
+          ],
+          "color_coding": "Light green/teal background",
+          "sample_bookings": ["Indy Gayed", "Robyn Turftield", "Chris Bedford"],
+          "pricing": "130"
+        },
+        {
+          "category": "Standard Queen",
+          "room_codes": [
+            "SQ - 09",
+            "SQ - 10",
+            "SQ - 11"
+          ],
+          "color_coding": "Light blue background",
+          "pricing": "140"
+        },
+        {
+          "category": "Queen Room",
+          "room_codes": [
+            "QR - 12",
+            "QR - 13",
+            "QR - 14",
+            "QR - 15",
+            "QR - 16",
+            "QR - 17",
+            "QR - 18",
+            "QR - 19",
+            "QR - 20"
+          ],
+          "color_coding": "Light purple background",
+          "pricing": "105-140"
+        },
+        {
+          "category": "Budget Triple",
+          "room_codes": [
+            "BT - 21",
+            "BT - 22",
+            "BT - 23",
+            "BT - 24",
+            "BT - 25"
+          ],
+          "color_coding": "Pink/magenta background",
+          "pricing": "120-135"
+        },
+        {
+          "category": "Interconnected Family Room",
+          "room_codes": [
+            "ICF - 23/22"
+          ],
+          "color_coding": "Pink background",
+          "pricing": "230"
+        },
+        {
+          "category": "Deluxe Triple",
+          "room_codes": [
+            "DLX - 27",
+            "DLX - 28"
+          ],
+          "color_coding": "Light gray background",
+          "pricing": "149-159"
+        },
+        {
+          "category": "Other Rooms",
+          "room_codes": [
+            "O - Bedroom House",
+            "OFF - Space Room - 2"
+          ]
+        }
+      ]
+    },
+    "guest_booking_information": {
+      "sample_guests": [
+        {
+          "name": "Indy Gayed",
+          "status_color": "Yellow highlight",
+          "check_in": "06 Feb",
+          "check_out": "07 Feb"
+        },
+        {
+          "name": "Robyn Turftield",
+          "status_color": "Green highlight",
+          "room": "ST - 02",
+          "pricing": "130"
+        },
+        {
+          "name": "Chris Bedford",
+          "status_color": "Red highlight",
+          "multiple_bookings": true
+        },
+        {
+          "name": "Brad Fraq Engineering",
+          "status_color": "Red highlight",
+          "group_booking": true
+        },
+        {
+          "name": "Viviana Cardio",
+          "status_color": "Red highlight",
+          "room": "ST - 01"
+        },
+        {
+          "name": "Andrew Swift",
+          "status_color": "Green highlight",
+          "check_in": "05 Feb",
+          "check_out": "06 Feb"
+        }
+      ],
+      "booking_status_colors": {
+        "yellow": "Pending or waiting confirmation",
+        "green": "Confirmed booking",
+        "red": "Urgent or action required",
+        "teal": "Multi-guest or group booking"
+      }
+    },
+    "right_sidebar_features": {
+      "guest_search": "Filter bookings by guest name",
+      "booking_card_displays": [
+        {
+          "guest": "mark smith",
+          "status": "New Booking",
+          "check_in": "17 Feb",
+          "check_out": "17 Apr",
+          "duration": "1N",
+          "action": "Unconfirmed"
+        },
+        {
+          "guest": "Andrew Swift",
+          "status": "Booking modified",
+          "check_in": "05 Feb",
+          "check_out": "06 Feb",
+          "duration": "1N",
+          "total": "$198"
+        },
+        {
+          "guest": "Chris Bedford",
+          "status": "Booking modified",
+          "check_in": "09 Feb",
+          "check_out": "12 Feb",
+          "duration": "3N",
+          "total": "$1134"
+        },
+        {
+          "guest": "Regina Boyad",
+          "status": "Booking modified",
+          "check_in": "12 Feb",
+          "check_out": "16 Feb",
+          "duration": "4N",
+          "total": "$540"
+        },
+        {
+          "guest": "Viviana Cardio",
+          "status": "New Booking",
+          "check_in": "06 Feb",
+          "check_out": "08 Feb",
+          "duration": "2N",
+          "total": "$310"
+        },
+        {
+          "guest": "Sean Harrison",
+          "status": "Booking details",
+          "check_in": "26 Feb onwards"
+        }
+      ]
+    },
+    "occupancy_display": {
+      "percentages_shown": [
+        "63% - Feb 07",
+        "48% - Feb 08",
+        "16% - Feb 09",
+        "41% - Feb 11",
+        "36% - Feb 12",
+        "22% - Feb 13",
+        "37% - Feb 14",
+        "48% - Feb 15",
+        "41% - Feb 16"
+      ],
+      "purpose": "Quick visual reference of property occupancy by date"
+    },
+    "calendar_features": {
+      "date_navigation": "Calendar with arrows to move between weeks/months",
+      "color_coded_status": "Guest bookings color-coded by status",
+      "guest_names_display": "Names shown directly in calendar cells",
+      "occupancy_percentage": "Percentage occupancy shown in header",
+      "room_type_icons": "Green checkmark for available, colored tags for status"
+    },
+    "action_buttons_visible": [
+      {
+        "text": "Add Roomtype",
+        "position": "Bottom left",
+        "color": "Blue"
+      },
+      {
+        "text": "Color Coding",
+        "position": "Bottom center",
+        "color": "Blue"
+      },
+      {
+        "text": "Settings",
+        "position": "Bottom center",
+        "color": "Blue"
+      }
+    ],
+    "key_features_for_ai_guidance": [
+      "Visual room inventory overview",
+      "Guest name and booking date display",
+      "Color-coded booking status (confirmed, pending, urgent)",
+      "Occupancy percentage tracking",
+      "Quick guest search functionality",
+      "Booking details sidebar",
+      "Check-in/check-out dates",
+      "Total booking amount display",
+      "Room type categorization",
+      "Date-based calendar navigation",
+      "Status indicators (booking modified, new booking, unconfirmed)"
+    ],
+    "use_cases": [
+      "Managing daily room bookings and guest arrivals",
+      "Viewing occupancy rates at a glance",
+      "Searching for specific guest bookings",
+      "Updating booking status and details",
+      "Planning room assignments and housekeeping",
+      "Tracking revenue by booking date",
+      "Managing group and multi-room bookings"
+    ]
+  },
+  "metadata": {
+    "capture_date": "2026-02-06",
+    "image_type": "Web Application - Reservation Management System",
+    "language": "English",
+    "region": "Australia (update247.com.au)",
+    "system_type": "Hotel/Accommodation Reservation System",
+    "purpose": "Calendar-based booking and room inventory management for hoteliers",
+    "ai_agent_guidance": "This interface is designed to help hospitality staff manage room bookings, track occupancy, and monitor guest reservations through an intuitive calendar view"
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "image_description": {
+    "page_title": "Update247 - All In One Property Management Platform",
+    "website_url": "update247.com.au",
+    "primary_heading": "update247™ All-In-One Package",
+    "description": "A comprehensive property management platform combining booking direct button, channel manager, and reservation management system",
+    "brand": {
+      "name": "update247",
+      "tagline": "Unlock Your Property's Full Potential with update247™ Channel Manager",
+      "logo_color": "Orange with blue accents"
+    },
+    "navigation_menu": [
+      "Home",
+      "Update247",
+      "Features",
+      "Pricing",
+      "Get Quote",
+      "All-In-One Package",
+      "GDS",
+      "FAQs",
+      "How It Works",
+      "Contact Us"
+    ],
+    "call_to_action_buttons": [
+      {
+        "text": "Login",
+        "color": "Orange",
+        "position": "Top right"
+      },
+      {
+        "text": "Sign Up",
+        "color": "Blue",
+        "position": "Top right"
+      },
+      {
+        "text": "Free Trial",
+        "color": "Orange",
+        "position": "Top right"
+      },
+      {
+        "text": "Demo",
+        "color": "Blue",
+        "position": "Top navigation"
+      }
+    ],
+    "featured_partners": [
+      {
+        "name": "Google",
+        "type": "Search & Travel Platform"
+      },
+      {
+        "name": "Booking.com",
+        "type": "OTA (Online Travel Agency)"
+      },
+      {
+        "name": "Expedia",
+        "type": "OTA (Online Travel Agency)"
+      },
+      {
+        "name": "Airbnb",
+        "type": "Vacation Rental Platform"
+      },
+      {
+        "name": "Agoda",
+        "type": "OTA (Online Travel Agency)"
+      },
+      {
+        "name": "VRBO",
+        "type": "Vacation Rental Platform"
+      },
+      {
+        "name": "TripAdvisor",
+        "type": "Review & Travel Platform"
+      }
+    ],
+    "main_features_sections": [
+      {
+        "feature_name": "Book Direct Button",
+        "position": "Left section",
+        "description": "Enables property owners to create direct booking buttons",
+        "visual_representation": "Desktop and mobile device mockups showing booking interface"
+      },
+      {
+        "feature_name": "Update247 Channel Manager",
+        "position": "Center section",
+        "description": "Centralized management system for multiple booking channels",
+        "visual_representation": "Desktop monitors and mobile devices displaying dashboard with multiple channels"
+      },
+      {
+        "feature_name": "Reservation Management System",
+        "position": "Right section",
+        "description": "Complete reservation handling and property management tools",
+        "visual_representation": "Desktop and mobile devices showing reservation management interface"
+      }
+    ],
+    "mobile_apps": {
+      "ios": {
+        "name": "App Store",
+        "available": true
+      },
+      "android": {
+        "name": "Google Play",
+        "available": true
+      }
+    },
+    "customer_testimonial": {
+      "customer_name": "Amanda Carle",
+      "rating": "5 stars",
+      "review_count": "4 photos",
+      "review_date": "22 Aug 2024",
+      "review_text": "Aj service is amazing. I have used 3 channel mangers before and this is absolutely 5 star Thanks AJ for all your help"
+    },
+    "background_visual": {
+      "type": "Aerial landscape photography",
+      "content": "Aerial view of coastal property/resort area with blue water and buildings",
+      "purpose": "Sets professional and luxury tone for property management platform"
+    },
+    "target_audience": "Property managers, hotel owners, vacation rental hosts, property management companies",
+    "key_value_propositions": [
+      "All-in-one solution",
+      "Multi-channel management",
+      "Direct booking capability",
+      "Centralized reservation management",
+      "Integration with major travel platforms"
+    ]
+  },
+  "metadata": {
+    "capture_date": "2026-02-06",
+    "image_type": "Website Homepage Screenshot",
+    "language": "English",
+    "region": "Australia (update247.com.au)"
+  }
+}

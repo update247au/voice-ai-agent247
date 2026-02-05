@@ -1,0 +1,21 @@
+{
+  "status": "success",
+  "message": "Screenshots retrieved successfully and mapped to AI agent descriptions.",
+  "data": {
+    "screenshots": [
+      {
+        "page": "homepage",
+        "image_url_image_description": "https://testserver.update247.com.au/testaj/asset/screenshot-text/update247-homepage.json"
+      },
+      {
+        "page": "CM-dashboard",
+        "image_url_image_description": "https://testserver.update247.com.au/testaj/asset/screenshot-text/Update247-channel-manager-dashboard-wth-property-id-sample.json"
+      },
+      {
+        "page": "reservation-system-calendar-page",
+        "image_url_image_description": "https://testserver.update247.com.au/testaj/asset/screenshot-text/Update247-reservation-system-calendar-booking-page.json"
+      }
+    ],
+    "asset_folder": "asset/screenshot-text/"
+  }
+}

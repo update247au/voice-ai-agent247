@@ -1,0 +1,243 @@
+{
+  "image_description": {
+    "page_title": "Update247 Channel Manager Dashboard - Property ID Sample",
+    "system_name": "Update247 Channel Manager Dashboard",
+    "system_type": "Property Management System (PMS) - Multi-Channel Manager",
+    "property_sample": "The Blue Lake Hotel (Property ID Sample)",
+    "page_type": "Daily Room Rates & Availability Management",
+    "current_view": "Master Rate Dashboard",
+    "location": "update247.com.au/reservation_system/daily_room_rates.php",
+    "date_range": {
+      "start_date": "06 Feb 2026",
+      "end_date": "Feb 26",
+      "display_period": "February 2026"
+    },
+    "top_navigation": {
+      "tabs": [
+        "All",
+        "Master",
+        "Master Rate"
+      ],
+      "buttons": [
+        {
+          "name": "Copy Across",
+          "color": "Blue",
+          "function": "Copy rates across multiple dates"
+        },
+        {
+          "name": "Bulk Update",
+          "color": "Blue",
+          "function": "Update multiple room rates simultaneously"
+        },
+        {
+          "name": "Oversell",
+          "color": "Red",
+          "function": "Enable overselling for rooms"
+        }
+      ]
+    },
+    "toolbar_features": [
+      "Search functionality",
+      "Dashboard",
+      "Housekeeping",
+      "Trading",
+      "Calendar",
+      "Inbox",
+      "Rates",
+      "Booking",
+      "Invoice",
+      "U247 Integration",
+      "APPS"
+    ],
+    "room_types": [
+      {
+        "room_type": "Deluxe Triple",
+        "availability_status": "Available",
+        "occupancy_percentage": "41%",
+        "pricing_info": "Base price 159 displayed across multiple dates",
+        "notes": "Color coded in light blue"
+      },
+      {
+        "room_type": "Deluxe Tiple",
+        "pricing": "159",
+        "min_stay": "Available",
+        "close_to_arrival": "Tracking available"
+      },
+      {
+        "room_type": "Family Room with Bunk Bed",
+        "occupancy_percentage": "31%",
+        "pricing": "159 (base rate)",
+        "color_coding": "Light yellow",
+        "availability": "Multiple dates shown"
+      },
+      {
+        "room_type": "Family Room with bunk bed",
+        "pricing": "159 to 179",
+        "min_stay": "Available",
+        "close_to_arrival": "Tracking enabled"
+      },
+      {
+        "room_type": "Interconnected family room",
+        "occupancy_percentage": "11%",
+        "pricing": "230",
+        "color_coding": "Light yellow",
+        "min_stay": "Yes"
+      },
+      {
+        "room_type": "Interconnected family room 2",
+        "pricing": "230",
+        "color_coding": "Light yellow"
+      },
+      {
+        "room_type": "Queen Room",
+        "occupancy_percentage": "Variable (3-8%)",
+        "pricing": "105 to 115",
+        "color_coding": "Light cyan",
+        "min_stay": "Available"
+      },
+      {
+        "room_type": "Standard Queen",
+        "occupancy_percentage": "0% to 7%",
+        "pricing": "130 to 140",
+        "color_coding": "Light gray"
+      },
+      {
+        "room_type": "Standard Triple",
+        "occupancy_percentage": "11% to 19%",
+        "pricing": "139 to 175",
+        "color_coding": "Pink/magenta",
+        "min_stay": "Required"
+      },
+      {
+        "room_type": "Twin Bedrooms",
+        "occupancy_percentage": "3% to 4%",
+        "pricing": "120 to 155",
+        "color_coding": "Pink/magenta"
+      }
+    ],
+    "column_headers": {
+      "days_of_week": ["Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu"],
+      "key_columns": [
+        "Date",
+        "Day",
+        "% Occ (Occupancy Percentage)",
+        "Rate (Price)",
+        "Stop Sell",
+        "Min Stay",
+        "Max Stay",
+        "CTA (Call to Action)",
+        "EFD (Effective Date)"
+      ]
+    },
+    "data_display_features": {
+      "color_coding": {
+        "light_blue": "Deluxe room types",
+        "light_yellow": "Family room types",
+        "light_cyan": "Queen rooms",
+        "light_gray": "Standard rooms",
+        "pink_magenta": "Premium room types (Triple/Twin)"
+      },
+      "pricing_range": "$105 - $230 per night",
+      "occupancy_display": "Percentage shown in cells (0% - 48%)"
+    },
+    "action_buttons": {
+      "add_roomtype": {
+        "text": "Add Roomtype",
+        "color": "Green",
+        "position": "Top left"
+      },
+      "copy_across": {
+        "text": "Copy Across",
+        "color": "Blue",
+        "position": "Top toolbar"
+      },
+      "bulk_update": {
+        "text": "Bulk Update",
+        "color": "Blue",
+        "position": "Top toolbar"
+      },
+      "oversell": {
+        "text": "Oversell",
+        "color": "Red",
+        "position": "Top toolbar"
+      },
+      "map_rooms": {
+        "text": "Map Rooms",
+        "color": "Orange",
+        "position": "Bottom right"
+      },
+      "add_channel": {
+        "text": "Add Channel",
+        "color": "Orange",
+        "position": "Bottom right"
+      }
+    },
+    "bottom_navigation": {
+      "tabs": [
+        "All",
+        "Master",
+        "Master Rate"
+      ],
+      "calendar_navigation": "Feb 26 selector with previous/next arrows"
+    },
+    "footer_icons": [
+      {
+        "name": "Calendar",
+        "function": "Date navigation"
+      },
+      {
+        "name": "Guest",
+        "function": "Guest management"
+      },
+      {
+        "name": "Rate",
+        "function": "Rate management"
+      },
+      {
+        "name": "Bulk",
+        "function": "Bulk operations"
+      },
+      {
+        "name": "Booking",
+        "function": "Booking management"
+      },
+      {
+        "name": "Search",
+        "function": "Search functionality"
+      },
+      {
+        "name": "Inbox",
+        "function": "Message inbox"
+      }
+    ],
+    "key_features": [
+      "Real-time rate management",
+      "Daily room pricing updates",
+      "Occupancy percentage tracking",
+      "Multi-room type management",
+      "Min/Max stay restrictions",
+      "Stop sell functionality",
+      "Bulk rate updates",
+      "Date range operations",
+      "Channel integration",
+      "Responsive table interface"
+    ],
+    "data_shown": {
+      "current_month": "February 2026",
+      "total_room_types": "10+",
+      "date_columns_visible": "February 6-26, 2026",
+      "pricing_model": "Daily rates per room type",
+      "minimum_rate": "$105",
+      "maximum_rate": "$230"
+    },
+    "use_case": "Hotel revenue management and pricing control system for The Blue Lake Hotel property"
+  },
+  "metadata": {
+    "capture_date": "2026-02-06",
+    "image_type": "Web Application - Property Management System",
+    "language": "English",
+    "region": "Australia (update247.com.au)",
+    "system_type": "Hotel/Accommodation PMS",
+    "purpose": "Rate and availability management interface for hoteliers"
+  }
+}
