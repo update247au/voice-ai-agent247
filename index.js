@@ -71,10 +71,156 @@ if (!OPENAI_API_KEY) {
     process.exit(1);
 }
 
+// Function to load agent settings from GCS bucket
+const loadAgentSettings = async () => {
+    const DEFAULT_SYSTEM_MESSAGE = `You are Update247's AI phone agent. Speak with a clear Australian English accent.
+
+GOAL:
+1)become a support or sales agent when you determine whether caller needs Support or Sales.
+2) IF call is realted to admin or its someone selling something, ask them send email to : info@update247.com.au and admin team will respond on the email.
+
+RULES:
+- Follow the FLOW strictly.
+- Ask ONE question at a time.
+- If the caller gives partial info, ask for the missing piece.
+- Always repeat key details back for confirmation.
+- Do not proceed to the next step until the current step is complete.
+- If caller refuses to share details, continue politely with what you have.
+- Use save_caller_info function to store collected data as you learn it.
+- become a support or sales agent when you determine whether caller needs Support or Sales.
+
+FLOW (state machine):
+
+STATE A — COLLECT PROPERTY Name
+- Ask: "Can I please have your property Name?" 
+- If provided -> save it -> go to STATE B.
+- If not provided -> ask: "if you are accommodation provider ?" -> go to STATE F.
+
+STATE B — GET PROPERTY ID
+- Say: "Thanks. Do you have your property ID is <ID>. its is visible on top left when logged into Update247."
+- If yes -> go to STATE G.
+- If no -> ask : how can I help you ?-> become a sales or support agent based on their response.
+
+STATE C — COLLECT PROPERTY NAME
+- Ask: "What is the property name?"
+- If provided -> save it -> go to STATE E.
+- If not provided -> ask again once. If still missing -> go to STATE F (general triage).
+
+STATE D — CHECK CLIENT STATUS
+- Ask: "Are you currently using Update247?"
+- If yes -> go to STATE G (Support).
+- If no -> go to STATE H (Sales).
+- If unsure -> ask: "Did you ever have an Update247 login before?" then decide.
+
+STATE E — CHECK CLIENT STATUS (NO ID PATH)
+- Ask: "Are you currently using Update247?"
+- If yes -> go to STATE G (Support) and ask for property ID later if needed.
+- If no -> go to STATE H (Sales).
+
+STATE F — GENERAL TRIAGE (MISSING DETAILS)
+- Ask: "Are you calling for help with an existing Update247 account, or are you looking to start using Update247?"
+- If existing -> STATE G.
+- If new -> STATE H.
+
+STATE G — SUPPORT MODE
+- Be a support agent.
+- Ask: "What issue can I help with today?"
+- If account lookup needed and missing ID -> ask for property ID again.
+
+STATE H — SALES MODE
+- Be a sales agent.
+- Ask: "Which channel manager / booking system are you using now, and how many properties do you manage?"
+- Offer next step: demo / pricing / onboarding.
+
+
+Speaking style rules (very important):
+
+- Speak slowly and clearly.
+- Use short sentences.
+- Pause briefly between sentences.
+- Avoid technical words.
+- Avoid long explanations.
+- Ask one question at a time.
+- If the caller sounds confused or asks "pardon" or "sorry?", slow down even more.
+- If needed, rephrase using simpler words.
+- Give the user time to respond after each question.
+
+LANGUAGE: You must ALWAYS speak and respond in English only unless caller ask you to speak in another language. If caller ask you to speak in another language, you must speak in that language.
+ 
+When speaking Hindi, prefer Hinglish (simple Hindi mixed with English).
+Avoid long pure-Hindi sentences.
+
+When speaking punjabi, prefer punglish (simple punjabi mixed with English).
+Avoid long pure-punjabi sentences.
+
+You are speaking to people who may not be fluent in English.
+
+Example speaking style:
+
+Instead of:
+"Please provide your property identification number so I can assist you."
+
+Say:
+"That's okay.
+I can help you.
+May I please have your property ID?"`;
+
+    // If GCS is not configured, return default settings
+    if (!GCS_BUCKET || !storage) {
+        console.log('ℹ️  GCS not configured. Using default system message.');
+        return {
+            system_message: DEFAULT_SYSTEM_MESSAGE,
+            voice: 'sage',
+            temperature: 0.2,
+            use_realtime_transcription: false
+        };
+    }
+
+    try {
+        // Load settings from GCS bucket
+        const settingsFile = storage.bucket(GCS_BUCKET).file('ai-setting/u247-agent.json');
+        const [exists] = await settingsFile.exists();
+        
+        if (!exists) {
+            console.log('⚠️  Settings file not found in GCS (gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json). Using default settings.');
+            return {
+                system_message: DEFAULT_SYSTEM_MESSAGE,
+                voice: 'sage',
+                temperature: 0.2,
+                use_realtime_transcription: false
+            };
+        }
+
+        const [fileContent] = await settingsFile.download();
+        const settings = JSON.parse(fileContent.toString('utf-8'));
+        
+        console.log('✓ Loaded agent settings from GCS: gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json');
+        
+        return {
+            system_message: settings.system_message || DEFAULT_SYSTEM_MESSAGE,
+            voice: settings.voice || 'sage',
+            temperature: settings.temperature !== undefined ? settings.temperature : 0.2,
+            use_realtime_transcription: settings.use_realtime_transcription || false
+        };
+    } catch (error) {
+        console.error('✗ Error loading agent settings from GCS:', error.message);
+        console.log('  Falling back to default system message.');
+        return {
+            system_message: DEFAULT_SYSTEM_MESSAGE,
+            voice: 'sage',
+            temperature: 0.2,
+            use_realtime_transcription: false
+        };
+    }
+};
+
 // Initialize Fastify
 const fastify = Fastify();
 fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
+
+// Placeholder for agent settings (will be loaded at startup)
+let AGENT_SETTINGS = null;
 
 // Constants
 const SYSTEM_MESSAGE = `You are Update247's AI phone agent. Speak with a clear Australian English accent.
@@ -169,7 +315,10 @@ Say:
 I can help you.
 May I please have your property ID?"`
 ;
-const VOICE = 'sage';
+
+// Note: VOICE and TEMPERATURE are now loaded dynamically from GCS settings
+// They are available in AGENT_SETTINGS.voice and AGENT_SETTINGS.temperature
+// after loadAgentSettings() is called at startup.
 
 const TEMPERATURE = 0.2; // Controls the randomness of the AI's responsess
 const USE_REALTIME_TRANSCRIPTION = false;
@@ -352,9 +501,9 @@ fastify.register(async (fastify) => {
                     output_modalities: ["audio"],
                     audio: {
                         input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
-                        output: { format: { type: 'audio/pcmu' }, voice: VOICE },
+                        output: { format: { type: 'audio/pcmu' }, voice: AGENT_SETTINGS.voice },
                     },
-                    instructions: SYSTEM_MESSAGE,
+                    instructions: AGENT_SETTINGS.system_message,
                     tools: [
                         {
                             type: "function",
@@ -1102,10 +1251,19 @@ fastify.register(async (fastify) => {
     });
 });
 
-fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
-    if (err) {
-        console.error(err);
-        process.exit(1);
-    }
-    console.log(`Server is listening on port ${PORT}`);
+// Load agent settings from GCS and start the server
+loadAgentSettings().then((settings) => {
+    AGENT_SETTINGS = settings;
+    
+    fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
+        if (err) {
+            console.error(err);
+            process.exit(1);
+        }
+        console.log(`Server is listening on port ${PORT}`);
+    });
+}).catch((error) => {
+    console.error('Failed to load agent settings:', error);
+    process.exit(1);
 });
+
