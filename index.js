@@ -413,8 +413,12 @@ fastify.all('/incoming-call', async (request, reply) => {
 
 // WebSocket route for media-stream.
 fastify.register(async (fastify) => {
-    fastify.get('/media-stream', { websocket: true }, (connection, req) => {
+    fastify.get('/media-stream', { websocket: true }, async (connection, req) => {
         console.log('Client connected');
+        
+        // Load fresh settings from GCS for this call
+        const callSettings = await loadAgentSettings();
+        console.log('✓ Loaded settings for this call. Voice:', callSettings.voice);
 
         // Connection-specific state
         let streamSid = null;
@@ -485,7 +489,7 @@ fastify.register(async (fastify) => {
                 // ignore
             }
 
-        const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`, {
+        const openAiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${callSettings.temperature}`, {
             headers: {
                 Authorization: `Bearer ${OPENAI_API_KEY}`,
             }
@@ -501,9 +505,9 @@ fastify.register(async (fastify) => {
                     output_modalities: ["audio"],
                     audio: {
                         input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },
-                        output: { format: { type: 'audio/pcmu' }, voice: AGENT_SETTINGS.voice },
+                        output: { format: { type: 'audio/pcmu' }, voice: callSettings.voice },
                     },
-                    instructions: AGENT_SETTINGS.system_message,
+                    instructions: callSettings.system_message,
                     tools: [
                         {
                             type: "function",
