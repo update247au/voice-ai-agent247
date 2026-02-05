@@ -616,7 +616,7 @@ fastify.register(async (fastify) => {
                     content: [
                         {
                             type: 'input_text',
-                            text: 'Greet the user with : Hi there, this is Lucy from Update 2 4 7 — how are you today?'
+                            text: 'Say this greeting to the caller: Hi there, this is Lucy from Update 2 4 7. How are you today?'
                         }
                     ]
                 }
