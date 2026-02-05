@@ -564,17 +564,27 @@ fastify.register(async (fastify) => {
                         {
                             type: "function",
                             name: "get_pricing_details",
-                            description: "Fetch current pricing and rates for a property. Call this when caller asks about pricing, rates, room types, or costs.",
+                            description: "Fetch current Update247 software pricing and plans. Call this when caller asks about pricing, plans, or costs. Property types: Hotel or Vacational Rental.",
                             parameters: {
                                 type: "object",
                                 properties: {
-                                    property_id: { type: "string", description: "Property ID to fetch rates for" }
+                                    property_type: { type: "string", description: "Property type: Hotel or Vacational Rental", enum: ["Hotel", "Vacational Rental"] }
                                 },
-                                required: ["property_id"]
+                                required: ["property_type"]
+                            }
+                        },
+                        {
+                            type: "function",
+                            name: "get_interface_screenshots",
+                            description: "Get screenshots of the Update247 interface. Call this when caller wants to see what the software looks like or see interface examples.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    feature: { type: "string", description: "Feature to show: dashboard, bookings, reports, or settings", enum: ["dashboard", "bookings", "reports", "settings"] }
+                                },
+                                required: ["feature"]
                             }
                         }
-                    ],
-                    tool_choice: "auto"
                 },
             };
 
@@ -848,8 +858,8 @@ fastify.register(async (fastify) => {
                     }
                     
                     if (functionName === 'get_pricing_details') {
-                        const propertyId = args.property_id || 'unknown';
-                        console.log('[Function Call] get_pricing_details - Fetching rates for property:', propertyId);
+                        const propertyType = args.property_type || 'Hotel';
+                        console.log('[Function Call] get_pricing_details - Fetching rates for property type:', propertyType);
                         
                         try {
                             // Call mock rates endpoint
@@ -861,7 +871,7 @@ fastify.register(async (fastify) => {
                             }
                             
                             const ratesData = await ratesResponse.json();
-                            console.log('[Pricing] Successfully fetched rates for property', propertyId);
+                            console.log('[Pricing] Successfully fetched rates for property type:', propertyType);
                             
                             const functionOutput = {
                                 type: 'conversation.item.create',
@@ -888,9 +898,48 @@ fastify.register(async (fastify) => {
                             openAiWs.send(JSON.stringify({ type: 'response.create' }));
                         }
                     }
-                }
 
-                // Detect when caller speech starts (from OpenAI Realtime API)
+                    if (functionName === 'get_interface_screenshots') {
+                        const feature = args.feature || 'dashboard';
+                        console.log('[Function Call] get_interface_screenshots - Fetching screenshots for feature:', feature);
+                        
+                        try {
+                            // Call screenshots endpoint
+                            const screenshotsUrl = 'https://testserver.update247.com.au/testaj/mock_screenshots.php?feature=' + encodeURIComponent(feature);
+                            const screenshotsResponse = await fetch(screenshotsUrl);
+                            
+                            if (!screenshotsResponse.ok) {
+                                throw new Error(`HTTP ${screenshotsResponse.status}: ${screenshotsResponse.statusText}`);
+                            }
+                            
+                            const screenshotsData = await screenshotsResponse.json();
+                            console.log('[Screenshots] Successfully fetched screenshots for feature:', feature);
+                            
+                            const functionOutput = {
+                                type: 'conversation.item.create',
+                                item: {
+                                    type: 'function_call_output',
+                                    call_id: response.call_id,
+                                    output: JSON.stringify(screenshotsData)
+                                }
+                            };
+                            openAiWs.send(JSON.stringify(functionOutput));
+                            openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                        } catch (error) {
+                            console.error('[Screenshots] Failed to fetch screenshots:', error.message);
+                            
+                            const errorOutput = {
+                                type: 'conversation.item.create',
+                                item: {
+                                    type: 'function_call_output',
+                                    call_id: response.call_id,
+                                    output: JSON.stringify({ error: 'Unable to retrieve interface screenshots. Please visit our website for demos.', details: error.message })
+                                }
+                            };
+                            openAiWs.send(JSON.stringify(errorOutput));
+                            openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                        }
+                    }
                 if (response.type === 'input_audio_buffer.speech_started') {
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     console.log('[CALLER SPEAKING] Speech detected - cancelling silence timer');

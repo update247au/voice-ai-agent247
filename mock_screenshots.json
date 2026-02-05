@@ -1,0 +1,20 @@
+{
+  "status": "success",
+  "message": "Screenshots retrieved successfully.",
+  "data": {
+    "screenshots": [
+      {
+        "page": "homepage",
+        "image_url": "https://cdn.update247.com.au/screenshots/homepage.png"
+      },
+      {
+        "page": "CM-dashboard",
+        "image_url": "https://cdn.update247.com.au/screenshots/cm-dashboard.png"
+      },
+      {
+        "page": "reservation-system-calander-page",
+        "image_url": "https://cdn.update247.com.au/screenshots/reservation-system-calander-page.png"
+      }
+    ]
+  }
+}
