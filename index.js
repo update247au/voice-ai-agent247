@@ -853,7 +853,7 @@ fastify.register(async (fastify) => {
                         
                         try {
                             // Call mock rates endpoint
-                            const ratesUrl = 'https://localhost/aiagent247/speech-assistant-openai-realtime-api-node/mock_rates.php';
+                            const ratesUrl = 'https://testserver.update247.com.au/testaj/mock_rates.php';
                             const ratesResponse = await fetch(ratesUrl);
                             
                             if (!ratesResponse.ok) {
