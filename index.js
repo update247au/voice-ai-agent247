@@ -228,7 +228,7 @@ fastify.register(fastifyWs);
 // Placeholder for agent settings (will be loaded at startup)
 let AGENT_SETTINGS = null;
 
-// Constants
+// Constantss
 const SYSTEM_MESSAGE = `You are Update247's AI phone agent. Speak with a clear Australian English accent.
 
 GOAL:
