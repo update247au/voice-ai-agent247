@@ -585,7 +585,9 @@ fastify.register(async (fastify) => {
                                 required: ["feature"]
                             }
                         }
-                },
+                    ],
+                    tool_choice: "auto"
+                }
             };
 
             console.log('Sending session update:', JSON.stringify(sessionUpdate));
@@ -940,7 +942,8 @@ fastify.register(async (fastify) => {
                             openAiWs.send(JSON.stringify({ type: 'response.create' }));
                         }
                     }
-                if (response.type === 'input_audio_buffer.speech_started') {
+
+                    if (response.type === 'input_audio_buffer.speech_started') {
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     console.log('[CALLER SPEAKING] Speech detected - cancelling silence timer');
                     console.log('  silenceTimer exists:', !!silenceTimer);
