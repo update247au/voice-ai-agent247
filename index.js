@@ -822,16 +822,19 @@ fastify.register(async (fastify) => {
 
                 // Handle rate_limits.updated to track token usage
                 if (response.type === 'rate_limits.updated') {
+                    console.log('[DEBUG] rate_limits.updated received:', JSON.stringify(response, null, 2));
                     if (response.rate_limits) {
                         callState.tokens_input = response.rate_limits.input_tokens || 0;
                         callState.tokens_output = response.rate_limits.output_tokens || 0;
                         
                         // Calculate cost based on pricing settings
-                        const inputCost = (callState.tokens_input / 1000000) * (callSettings.pricing?.input_tokens_per_1m || 0.10);
-                        const outputCost = (callState.tokens_output / 1000000) * (callSettings.pricing?.output_tokens_per_1m || 0.40);
+                        const inputCost = (callState.tokens_input / 1000000) * (callSettings.pricing?.input_tokens_per_1m || 32.00);
+                        const outputCost = (callState.tokens_output / 1000000) * (callSettings.pricing?.output_tokens_per_1m || 64.00);
                         callState.cost_dollars = parseFloat((inputCost + outputCost).toFixed(6));
                         
                         console.log(`[TOKENS] Input: ${callState.tokens_input}, Output: ${callState.tokens_output}, Cost: $${callState.cost_dollars.toFixed(6)}`);
+                    } else {
+                        console.log('[DEBUG] rate_limits.updated has no rate_limits property. Full response:', JSON.stringify(response, null, 2));
                     }
                 }
 
@@ -1286,6 +1289,30 @@ fastify.register(async (fastify) => {
             console.log('  Routed To:', callState.routing ? callState.routing.toUpperCase() : 'Not routed');
             console.log('  Final State:', callState.current_state);
             console.log('═══════════════════════════════════════════');
+            
+            // Fallback: If tokens are still 0, estimate from conversation
+            if (callState.tokens_input === 0 && callState.tokens_output === 0 && conversationLog.length > 0) {
+                console.log('  [ESTIMATING TOKENS FROM CONVERSATION]');
+                // Rough estimate: ~4 tokens per word, conversation exchanges
+                let estimatedTokens = 0;
+                conversationLog.forEach(item => {
+                    if (item.content) {
+                        const words = String(item.content).split(/\s+/).length;
+                        estimatedTokens += Math.ceil(words * 1.3); // Conservative estimate
+                    }
+                });
+                // Assume roughly 40% input, 60% output for voice conversations
+                callState.tokens_input = Math.ceil(estimatedTokens * 0.4);
+                callState.tokens_output = Math.ceil(estimatedTokens * 0.6);
+                
+                // Recalculate cost
+                const inputCost = (callState.tokens_input / 1000000) * (callSettings.pricing?.input_tokens_per_1m || 32.00);
+                const outputCost = (callState.tokens_output / 1000000) * (callSettings.pricing?.output_tokens_per_1m || 64.00);
+                callState.cost_dollars = parseFloat((inputCost + outputCost).toFixed(6));
+                console.log('  Estimated Input Tokens:', callState.tokens_input);
+                console.log('  Estimated Output Tokens:', callState.tokens_output);
+            }
+            
             console.log('  [TOKEN USAGE & COST]');
             console.log('  Input Tokens:', callState.tokens_input);
             console.log('  Output Tokens:', callState.tokens_output);
