@@ -461,6 +461,7 @@ fastify.register(async (fastify) => {
         caller_email: null,
         issue_description: null,
         is_existing_client: null,
+        is_logged_in: null, // Track if user is currently logged into Update247
         routing: null, // 'support' or 'sales'
         current_state: 'A' // Track state machine progress (A-H)
     };
@@ -540,6 +541,7 @@ fastify.register(async (fastify) => {
                                     caller_email: { type: "string", description: "Caller's email address" },
                                     issue_description: { type: "string", description: "Brief description of their issue or question" },
                                     is_existing_client: { type: "boolean", description: "Whether caller is an existing Update247 client" },
+                                    is_logged_in: { type: "boolean", description: "Whether caller is currently logged into Update247" },
                                     current_state: { type: "string", description: "Current state in the flow (A-H)" }
                                 }
                             }
@@ -824,6 +826,7 @@ fastify.register(async (fastify) => {
                         if (args.caller_email) callState.caller_email = args.caller_email;
                         if (args.issue_description) callState.issue_description = args.issue_description;
                         if (args.is_existing_client !== undefined) callState.is_existing_client = args.is_existing_client;
+                        if (args.is_logged_in !== undefined) callState.is_logged_in = args.is_logged_in;
                         if (args.current_state) callState.current_state = args.current_state;
                         
                         console.log('[CallState Updated]', callState);
