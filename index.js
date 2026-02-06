@@ -465,9 +465,12 @@ fastify.register(async (fastify) => {
         caller_email: null,
         issue_description: null,
         is_existing_client: null,
-         is_logged_in: null, // Track if user is currently logged into Update247
+        is_logged_in: null, // Track if user is currently logged into Update247
         routing: null, // 'support' or 'sales'
-        current_state: 'A' // Track state machine progress (A-H)
+        current_state: 'A', // Track state machine progress (A-H)
+        tokens_input: 0, // Track input tokens
+        tokens_output: 0, // Track output tokens
+        cost_dollars: 0 // Track total cost in dollars
     };
     
     // Silence detection state
@@ -815,6 +818,21 @@ fastify.register(async (fastify) => {
 
                 if (LOG_EVENT_TYPES.includes(response.type)) {
                     console.log(`[EVENT_DETAIL] ${response.type}`, response);
+                }
+
+                // Handle rate_limits.updated to track token usage
+                if (response.type === 'rate_limits.updated') {
+                    if (response.rate_limits) {
+                        callState.tokens_input = response.rate_limits.input_tokens || 0;
+                        callState.tokens_output = response.rate_limits.output_tokens || 0;
+                        
+                        // Calculate cost based on pricing settings
+                        const inputCost = (callState.tokens_input / 1000000) * (callSettings.pricing?.input_tokens_per_1m || 0.10);
+                        const outputCost = (callState.tokens_output / 1000000) * (callSettings.pricing?.output_tokens_per_1m || 0.40);
+                        callState.cost_dollars = parseFloat((inputCost + outputCost).toFixed(6));
+                        
+                        console.log(`[TOKENS] Input: ${callState.tokens_input}, Output: ${callState.tokens_output}, Cost: $${callState.cost_dollars.toFixed(6)}`);
+                    }
                 }
 
                 // Handle function calls from AI
@@ -1268,6 +1286,12 @@ fastify.register(async (fastify) => {
             console.log('  Routed To:', callState.routing ? callState.routing.toUpperCase() : 'Not routed');
             console.log('  Final State:', callState.current_state);
             console.log('═══════════════════════════════════════════');
+            console.log('  [TOKEN USAGE & COST]');
+            console.log('  Input Tokens:', callState.tokens_input);
+            console.log('  Output Tokens:', callState.tokens_output);
+            console.log('  Total Tokens:', callState.tokens_input + callState.tokens_output);
+            console.log('  Estimated Cost: $' + callState.cost_dollars.toFixed(6));
+            console.log('═══════════════════════════════════════════');
             
             // Extract numbers from webhookBody if not already set
             if (!callerNumber && webhookBody) {
@@ -1304,6 +1328,12 @@ fastify.register(async (fastify) => {
                 callerNumber: callerNumber,
                 calleeNumber: calleeNumber,
                 callState: callState,
+                tokenUsage: {
+                    input_tokens: callState.tokens_input,
+                    output_tokens: callState.tokens_output,
+                    total_tokens: callState.tokens_input + callState.tokens_output,
+                    estimated_cost_usd: parseFloat(callState.cost_dollars.toFixed(6))
+                },
                 webhookBody: webhookBody || null,
                 startTime: callStartTime.toISOString(),
                 endTime: callEndTime.toISOString(),
