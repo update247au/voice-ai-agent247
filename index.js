@@ -172,7 +172,8 @@ May I please have your property ID?"`;
             system_message: DEFAULT_SYSTEM_MESSAGE,
             voice: 'sage',
             temperature: 0.2,
-            use_realtime_transcription: false
+            use_realtime_transcription: false,
+            initial_greeting: 'Greet the user with : This is Lucy from Update 2 4 7. How are you today?'
         };
     }
 
@@ -187,7 +188,8 @@ May I please have your property ID?"`;
                 system_message: DEFAULT_SYSTEM_MESSAGE,
                 voice: 'sage',
                 temperature: 0.2,
-                use_realtime_transcription: false
+                use_realtime_transcription: false,
+                initial_greeting: 'Greet the user with : This is Lucy from Update 2 4 7. How are you today?'
             };
         }
 
@@ -203,7 +205,8 @@ May I please have your property ID?"`;
             system_message: settings.system_message || DEFAULT_SYSTEM_MESSAGE,
             voice: settings.voice || 'sage',
             temperature: settings.temperature !== undefined ? settings.temperature : 0.2,
-            use_realtime_transcription: settings.use_realtime_transcription || false
+            use_realtime_transcription: settings.use_realtime_transcription || false,
+            initial_greeting: settings.initial_greeting || 'Greet the user with : This is Lucy from Update 2 4 7. How are you today?'
         };
         
         console.log('✓ Final settings to use - system_message length:', finalSettings.system_message.length);
@@ -215,7 +218,8 @@ May I please have your property ID?"`;
             system_message: DEFAULT_SYSTEM_MESSAGE,
             voice: 'sage',
             temperature: 0.2,
-            use_realtime_transcription: false
+            use_realtime_transcription: false,
+            initial_greeting: 'Greet the user with : This is Lucy from Update 2 4 7. How are you today?'
         };
     }
 };
