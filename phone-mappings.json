@@ -1,0 +1,34 @@
+{
+  "phone_mappings": [
+    {
+      "phone_number": "+16575713530",
+      "property_id": "PROP_001",
+      "property_name": "The Blue Lake Hotel"
+    },
+    {
+      "phone_number": "6575713530",
+      "property_id": "PROP_001",
+      "property_name": "The Blue Lake Hotel"
+    },
+    {
+      "phone_number": "+61423489798",
+      "property_id": "PROP_002",
+      "property_name": "Sunset Resort"
+    },
+    {
+      "phone_number": "0412345678",
+      "property_id": "PROP_002",
+      "property_name": "Sunset Resort"
+    },
+    {
+      "phone_number": "+61487654321",
+      "property_id": "PROP_003",
+      "property_name": "Mountain View Hotel"
+    },
+    {
+      "phone_number": "0487654321",
+      "property_id": "PROP_003",
+      "property_name": "Mountain View Hotel"
+    }
+  ]
+}
