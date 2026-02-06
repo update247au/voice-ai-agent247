@@ -891,12 +891,14 @@ fastify.register(async (fastify) => {
         openAiWs.on('open', async () => {
             console.log('Connected to the OpenAI Realtime API');
             console.log('[DEBUG] streamSid at OpenAI connect:', streamSid, 'sessionInitialized:', sessionInitialized, 'shouldSendInitialGreeting:', shouldSendInitialGreeting);
+            console.log('[DEBUG] CallerNumber before lookup:', callerNumber);
             
             // Lookup property by phone number before initializing
             if (callerNumber) {
-                console.log('[Phone Lookup] Attempting to lookup property for caller number:', callerNumber);
+                console.log('[Phone Lookup] START - Attempting to lookup property for caller number:', callerNumber);
                 callState.phone_lookup_performed = true;
                 const propertyData = await lookupPropertyByPhone(callerNumber);
+                console.log('[Phone Lookup] END - Result:', propertyData);
                 if (propertyData) {
                     callState.property_id = propertyData.property_id;
                     callState.property_name = propertyData.property_name;
