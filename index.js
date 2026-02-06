@@ -470,7 +470,10 @@ fastify.register(async (fastify) => {
         current_state: 'A', // Track state machine progress (A-H)
         tokens_input: 0, // Track input tokens
         tokens_output: 0, // Track output tokens
-        cost_dollars: 0 // Track total cost in dollars
+        cost_dollars: 0, // Track total cost in dollars
+        call_duration_seconds: 0, // Track call duration
+        call_start_time: callStartTime.toISOString(), // Track call start time
+        call_end_time: null // Track call end time
     };
     
     // Silence detection state
@@ -1333,6 +1336,16 @@ fastify.register(async (fastify) => {
             
             const callEndTime = new Date();
             const duration = Math.round((callEndTime - callStartTime) / 1000); // Duration in seconds
+            callState.call_duration_seconds = duration; // Store in callState
+            callState.call_end_time = callEndTime.toISOString(); // Store end time
+            
+            console.log('  [CALL TIMES]');
+            console.log('  Start Time: ' + callStartTime.toISOString());
+            console.log('  End Time: ' + callEndTime.toISOString());
+            console.log('═══════════════════════════════════════════');
+            console.log('  [CALL DURATION]');
+            console.log('  Duration: ' + duration + ' seconds (' + Math.floor(duration / 60) + 'm ' + (duration % 60) + 's)');
+            console.log('═══════════════════════════════════════════');
             
             // Format: call-<callerNumber>-<toNumber>-<dd>-<mon>-<yyyy>-<hh>-<mm>.json
             const sanitize = (s) => (String(s || '')).replace(/[^0-9]/g, '') || 'unknown';
@@ -1359,7 +1372,11 @@ fastify.register(async (fastify) => {
                     input_tokens: callState.tokens_input,
                     output_tokens: callState.tokens_output,
                     total_tokens: callState.tokens_input + callState.tokens_output,
-                    estimated_cost_usd: parseFloat(callState.cost_dollars.toFixed(6))
+                    estimated_cost_usd: parseFloat(callState.cost_dollars.toFixed(6)),
+                    call_duration_seconds: duration,
+                    call_duration_formatted: Math.floor(duration / 60) + 'm ' + (duration % 60) + 's',
+                    call_start_time: callStartTime.toISOString(),
+                    call_end_time: callEndTime.toISOString()
                 },
                 webhookBody: webhookBody || null,
                 startTime: callStartTime.toISOString(),
