@@ -461,7 +461,7 @@ fastify.register(async (fastify) => {
         caller_email: null,
         issue_description: null,
         is_existing_client: null,
-        is_logged_in: null, // Track if user is currently logged into Update247
+         is_logged_in: null, // Track if user is currently logged into Update247
         routing: null, // 'support' or 'sales'
         current_state: 'A' // Track state machine progress (A-H)
     };
@@ -610,6 +610,8 @@ fastify.register(async (fastify) => {
         // Send initial conversation item if AI talks first
         const sendInitialConversationItem = () => {
             console.log('[sendInitialConversationItem] Sending initial greeting to OpenAI');
+            // Load greeting from settings, fallback to default if not provided
+            const greetingText = callSettings.initial_greeting || 'Greet the user with : Hi there, How are you today?';
             const initialConversationItem = {
                 type: 'conversation.item.create',
                 item: {
@@ -618,7 +620,7 @@ fastify.register(async (fastify) => {
                     content: [
                         {
                             type: 'input_text',
-                            text: 'Greet the user with : This is Lucy from Update 2 4 7. How are you today?'
+                            text: greetingText
                         }
                     ]
                 }
