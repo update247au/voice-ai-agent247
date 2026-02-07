@@ -1,0 +1,383 @@
+{
+  "schema_version": "1.0",
+  "agent": {
+    "name": "Update247 Expert Phone Agent",
+    "persona": {
+      "role": "Expert phone agent",
+      "gender": "female",
+      "accent": "clear",
+      "speaking_style_rules": [
+        "Speak slowly and clearly.",
+        "Use short sentences.",
+        "Pause briefly between sentences.",
+        "Avoid technical words.",
+        "Avoid long explanations.",
+        "Ask one question at a time.",
+        "If caller sounds confused or says 'pardon' or 'sorry', slow down more.",
+        "If needed, rephrase using simpler words.",
+        "Give the caller time to respond after each question."
+      ],
+      "language_policy": {
+        "default_language": "en",
+        "switch_only_if_requested": true,
+        "hindi_mode": {
+          "style": "Hinglish",
+          "rules": [
+            "Use simple Hindi mixed with English.",
+            "Avoid long pure-Hindi sentences."
+          ]
+        },
+        "punjabi_mode": {
+          "style": "Punglish",
+          "rules": [
+            "Use simple Punjabi mixed with English.",
+            "Avoid long pure-Punjabi sentences."
+          ]
+        }
+      }
+    },
+    "goals": [
+      "Provide support for Update247."
+    ],
+    "tools": [
+      {
+        "name": "save_caller_info",
+        "description": "Stores any collected caller/property/issue fields."
+      }
+    ]
+  },
+
+  "memory": {
+    "caller_name": null,
+    "property_name": null,
+    "property_id": null,
+    "call_reason": null,
+    "intent": null,
+    "issue_type": null,
+    "issue_description": null,
+    "preferred_language": "en"
+  },
+
+  "nlp_contract": {
+    "inputs_expected_from_runtime": [
+      "caller_utterance_text"
+    ],
+    "extraction_targets": [
+      "caller_name",
+      "property_name",
+      "property_id",
+      "intent",
+      "call_reason",
+      "issue_type",
+      "language_request"
+    ],
+    "intents": [
+      "support",
+      "sales",
+      "unknown"
+    ],
+    "issue_types": [
+      "rate_issue",
+      "booking_issue",
+      "double_booking_issue",
+      "login_issue",
+      "unknown"
+    ],
+    "language_request_values": [
+      "en",
+      "hi",
+      "pa"
+    ],
+    "notes": "Your runtime (or a classifier) should map caller text to these intents/issue types where possible."
+  },
+
+  "global_rules": {
+    "ask_one_question_at_a_time": true,
+    "strict_flow": true,
+    "if_refuses_details_continue": true,
+    "reprompt": {
+      "silence_timeout_seconds": 5,
+      "max_reprompts": 2,
+      "reprompt_texts": [
+        "Sorry. I did not catch that.",
+        "Can you please say that again?"
+      ]
+    }
+  },
+
+  "initial_state": "STATE_1_LISTEN",
+
+  "states": {
+    "STATE_1_LISTEN": {
+      "type": "listen",
+      "description": "Listen first. Capture name/property if caller provides. If no reason given, ask how to assist. Route to Support vs Sales.",
+      "on_input": [
+        {
+          "if": { "language_request": "hi" },
+          "actions": [
+            { "set_memory": { "preferred_language": "hi" } },
+            { "tool": "save_caller_info", "args": { "preferred_language": "hi" } }
+          ],
+          "next": "STATE_1_LISTEN"
+        },
+        {
+          "if": { "language_request": "pa" },
+          "actions": [
+            { "set_memory": { "preferred_language": "pa" } },
+            { "tool": "save_caller_info", "args": { "preferred_language": "pa" } }
+          ],
+          "next": "STATE_1_LISTEN"
+        },
+
+        {
+          "if_any_present": ["caller_name", "property_name"],
+          "actions": [
+            {
+              "tool": "save_caller_info",
+              "args": {
+                "caller_name": "{{caller_name}}",
+                "property_name": "{{property_name}}"
+              }
+            }
+          ]
+        },
+
+        {
+          "if_present": "call_reason",
+          "actions": [
+            { "set_memory": { "call_reason": "{{call_reason}}" } },
+            { "tool": "save_caller_info", "args": { "call_reason": "{{call_reason}}" } }
+          ]
+        },
+
+        {
+          "if": { "intent": "support" },
+          "actions": [
+            { "set_memory": { "intent": "support" } },
+            { "tool": "save_caller_info", "args": { "intent": "support" } }
+          ],
+          "next": "STATE_A_PROPERTY_NAME"
+        },
+        {
+          "if": { "intent": "sales" },
+          "actions": [
+            { "set_memory": { "intent": "sales" } },
+            { "tool": "save_caller_info", "args": { "intent": "sales" } }
+          ],
+          "next": "STATE_H_SALES_MODE"
+        },
+
+        {
+          "if_missing": "call_reason",
+          "next": "STATE_1_ASK_HOW_CAN_I_HELP"
+        },
+
+        {
+          "default_next": "STATE_1_ASK_HOW_CAN_I_HELP"
+        }
+      ]
+    },
+
+    "STATE_1_ASK_HOW_CAN_I_HELP": {
+      "type": "question",
+      "ask": "How can I assist you?",
+      "expects": {
+        "field": "call_reason",
+        "type": "string",
+        "min_length": 2
+      },
+      "on_success": [
+        { "set_memory": { "call_reason": "{{call_reason}}" } },
+        { "tool": "save_caller_info", "args": { "call_reason": "{{call_reason}}" } }
+      ],
+      "routing": [
+        { "if": { "intent": "support" }, "next": "STATE_A_PROPERTY_NAME" },
+        { "if": { "intent": "sales" }, "next": "STATE_H_SALES_MODE" }
+      ],
+      "on_fail": {
+        "next": "STATE_F_TRIAGE"
+      },
+      "next": "STATE_F_TRIAGE"
+    },
+
+    "STATE_A_PROPERTY_NAME": {
+      "type": "question",
+      "description": "Collect property name if missing.",
+      "guard": { "if_missing": "property_name" },
+      "ask": "What is your property name?",
+      "expects": {
+        "field": "property_name",
+        "type": "string",
+        "min_length": 2
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "property_name": "{{property_name}}" } }
+      ],
+      "on_fail": {
+        "next": "STATE_F_TRIAGE"
+      },
+      "next": "STATE_B_PROPERTY_ID"
+    },
+
+    "STATE_B_PROPERTY_ID": {
+      "type": "question",
+      "ask": "Thanks. What is your property ID? You can see it on the top left when you log into Update247.",
+      "expects": {
+        "field": "property_id",
+        "type": "digits",
+        "min_length": 2
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "property_id": "{{property_id}}" } }
+      ],
+      "on_fail": {
+        "fallback_question": "No problem. How can I assist you today?",
+        "next": "STATE_F_TRIAGE"
+      },
+      "next": "STATE_G_SUPPORT_MODE"
+    },
+
+    "STATE_F_TRIAGE": {
+      "type": "question",
+      "ask": "Are you calling for help with an existing Update247 account, or are you looking to start using Update247?",
+      "expects": {
+        "field": "intent",
+        "type": "enum",
+        "values": ["support", "sales", "unknown"]
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "intent": "{{intent}}" } }
+      ],
+      "routing": [
+        { "if": { "intent": "support" }, "next": "STATE_G_SUPPORT_MODE" },
+        { "if": { "intent": "sales" }, "next": "STATE_H_SALES_MODE" }
+      ],
+      "next": "STATE_G_SUPPORT_MODE"
+    },
+
+    "STATE_G_SUPPORT_MODE": {
+      "type": "question",
+      "description": "Support mode: ask for issue, classify, route.",
+      "ask": "Please tell me more about the issue.",
+      "expects": {
+        "field": "issue_description",
+        "type": "string",
+        "min_length": 5
+      },
+      "on_success": [
+        { "set_memory": { "issue_description": "{{issue_description}}" } },
+        { "tool": "save_caller_info", "args": { "issue_description": "{{issue_description}}" } }
+      ],
+      "routing": [
+        { "if": { "issue_type": "rate_issue" }, "next": "STATE_RATE_I" },
+        { "if": { "issue_type": "booking_issue" }, "next": "STATE_ISS_ESCALATE" },
+        { "if": { "issue_type": "double_booking_issue" }, "next": "STATE_ISS_ESCALATE" },
+        { "if": { "issue_type": "login_issue" }, "next": "STATE_ISS_ESCALATE" },
+        { "if": { "issue_type": "unknown" }, "next": "STATE_ISS_ESCALATE" }
+      ],
+      "next": "STATE_ISS_ESCALATE"
+    },
+
+    "STATE_RATE_I": {
+      "type": "scripted_help",
+      "description": "Provide simple steps to update rates.",
+      "say": [
+        "Okay.",
+        "I will help you update the rate.",
+        "Please click the Rates link in the top menu.",
+        "You will see the rate grid.",
+        "Click in the box.",
+        "Then type the new rate.",
+        "If you want to change many dates, use Bulk Update.",
+        "In the top menu, open Bulk Update.",
+        "Select the date range.",
+        "Select the room and rate you want to change.",
+        "Enter the new rate.",
+        "Then click Save at the bottom."
+      ],
+      "next": "STATE_RATE_I_CHECK_DONE"
+    },
+
+    "STATE_RATE_I_CHECK_DONE": {
+      "type": "question",
+      "ask": "Did that work for you?",
+      "expects": {
+        "field": "confirmation",
+        "type": "enum",
+        "values": ["yes", "no", "not_sure"]
+      },
+      "routing": [
+        { "if": { "confirmation": "yes" }, "next": "STATE_END_SUCCESS" },
+        { "if": { "confirmation": "no" }, "next": "STATE_ISS_ESCALATE" },
+        { "if": { "confirmation": "not_sure" }, "next": "STATE_ISS_ESCALATE" }
+      ],
+      "next": "STATE_ISS_ESCALATE"
+    },
+
+    "STATE_ISS_ESCALATE": {
+      "type": "closure",
+      "description": "Collect/confirm issue details and escalate.",
+      "actions": [
+        {
+          "tool": "save_caller_info",
+          "args": {
+            "issue_description": "{{issue_description}}",
+            "property_name": "{{property_name}}",
+            "property_id": "{{property_id}}",
+            "caller_name": "{{caller_name}}"
+          }
+        }
+      ],
+      "say": [
+        "Thank you.",
+        "I will ask my team to check this.",
+        "We will arrange a call for you."
+      ],
+      "next": "STATE_END_ESCALATED"
+    },
+
+    "STATE_H_SALES_MODE": {
+      "type": "question",
+      "description": "Sales mode: qualify and offer next steps.",
+      "ask": "Are you planning to use Update247 for your property? Do you have a specific question for me?",
+      "expects": {
+        "field": "sales_need",
+        "type": "string",
+        "min_length": 2
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "sales_need": "{{sales_need}}" } }
+      ],
+      "next": "STATE_H_OFFER_NEXT_STEP"
+    },
+
+    "STATE_H_OFFER_NEXT_STEP": {
+      "type": "scripted_help",
+      "say": [
+        "Okay.",
+        "Next step can be a demo, pricing, or onboarding.",
+        "What would you like?"
+      ],
+      "next": "STATE_END_SALES_HANDOFF"
+    },
+
+    "STATE_END_SUCCESS": {
+      "type": "end",
+      "outcome": "resolved",
+      "say": [
+        "Great.",
+        "Is there anything else I can help you with?"
+      ]
+    },
+
+    "STATE_END_ESCALATED": {
+      "type": "end",
+      "outcome": "escalated"
+    },
+
+    "STATE_END_SALES_HANDOFF": {
+      "type": "end",
+      "outcome": "sales"
+    }
+  }
+}
