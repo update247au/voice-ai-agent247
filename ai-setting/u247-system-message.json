@@ -18,7 +18,7 @@
         "Give the caller time to respond after each question."
       ],
       "language_policy": {
-        "default_language": "en",
+        "default_language": "fr",
         "switch_only_if_requested": true,
         "hindi_mode": {
           "style": "Hinglish",
