@@ -598,6 +598,9 @@ fastify.register(async (fastify) => {
         is_logged_in: null, // Track if user is currently logged into Update247
         routing: null, // 'support' or 'sales'
         current_state: 'A', // Track state machine progress (A-H)
+        sales_need: null, // What the sales caller is looking for
+        demo_choice: null, // 'self_serve' or 'book_demo'
+        demo_preferred_time: null, // Preferred day/time for booked demo
         tokens_input: 0, // Track input tokens
         tokens_output: 0, // Track output tokens
         cost_dollars: 0, // Track total cost in dollars
@@ -688,7 +691,10 @@ fastify.register(async (fastify) => {
                                     issue_description: { type: "string", description: "Brief description of their issue or question" },
                                     is_existing_client: { type: "boolean", description: "Whether caller is an existing Update247 client" },
                                     is_logged_in: { type: "boolean", description: "Whether caller is currently logged into Update247" },
-                                    current_state: { type: "string", description: "Current state in the flow (A-H)" }
+                                    current_state: { type: "string", description: "Current state in the flow (A-H)" },
+                                    sales_need: { type: "string", description: "What the sales/new caller is looking for" },
+                                    demo_choice: { type: "string", description: "Demo preference: self_serve or book_demo", enum: ["self_serve", "book_demo"] },
+                                    demo_preferred_time: { type: "string", description: "Caller's preferred day and time for a booked demo" }
                                 }
                             }
                         },
@@ -995,6 +1001,9 @@ fastify.register(async (fastify) => {
                         if (args.is_existing_client !== undefined) callState.is_existing_client = args.is_existing_client;
                         if (args.is_logged_in !== undefined) callState.is_logged_in = args.is_logged_in;
                         if (args.current_state) callState.current_state = args.current_state;
+                        if (args.sales_need) callState.sales_need = args.sales_need;
+                        if (args.demo_choice) callState.demo_choice = args.demo_choice;
+                        if (args.demo_preferred_time) callState.demo_preferred_time = args.demo_preferred_time;
                         
                         console.log('[CallState Updated]', callState);
                         

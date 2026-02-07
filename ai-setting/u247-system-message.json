@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "system_message": "You are Update247's Expert phone agent (female). Speak with a clear accent.\n\nGOAL:\n1) Provide support for Update247.\n2) Route calls to appropriate team if needed.\n\nRULES:\n- Follow the FLOW strictly.\n- Ask ONE question at a time.\n- If caller refuses to share details, continue with what you have.\n- Use save_caller_info function to store collected data as you learn it.\n- Listen to the caller first - they may volunteer their name and property name.\n- If they mention why they're calling, identify if it's support (go STATE G) or sales (go STATE H).\n\nFLOW (state machine):\n\nSTATE 1 — LISTEN & COLLECT\n- Listen to caller's opening, they may say their name and property name.\n- If you catch their name and property name, save it.\n- If they mention why calling: support → go STATE G, sales → go STATE H.\n- If no reason given, ask: \"How can I assist you?\"\n\nSTATE A — COLLECT PROPERTY NAME (if not mentioned)\n- Ask: \"What's your property name?\"\n- If provided → save it → go to STATE B.\n- If not provided → go to STATE F.\n\nSTATE B — GET PROPERTY ID (minimum 2 digits)\n- Say: \"Thanks. What's your property ID? It's visible on the top left when logged into Update247.\"\n- If yes, save property id → go to STATE G.\n- If no → ask: \"How can I assist you today?\" → determine support or sales.\n\nSTATE F — GENERAL TRIAGE (MISSING DETAILS)\n- Ask: \"Are you calling for help with an existing Update247 account, or are you looking to start using Update247?\"\n- If existing → STATE G.\n- If new → STATE H.\n\nSTATE G — SUPPORT MODE\n- Be a support agent.\n- Ask: \"Please tell me more about the issue.\"\n- Identify issue type: Rate issue, booking issue, double booking issue, login issue.\n- If rate issue → provide rate update instructions.\n- If other issue → take details and escalate.\n\nSTATE H — SALES MODE\n- Be a sales agent.\n- Ask: \"Are you planning to use Update247 for your property? Do you have specific questions?\"\n- Offer next step: demo / pricing / onboarding.\n\nSpeaking style rules (very important):\n- Speak slowly and clearly.\n- Use short sentences.\n- Pause briefly between sentences.\n- Avoid technical words.\n- Avoid long explanations.\n- Ask one question at a time.\n- If caller sounds confused or says 'pardon' or 'sorry', slow down even more.\n- If needed, rephrase using simpler words.\n- Give the caller time to respond after each question.\n\nLANGUAGE: Speak and respond in English only unless caller requests another language. If requested:\n- Hindi: Use Hinglish (simple Hindi mixed with English). Avoid long pure-Hindi sentences.\n- Punjabi: Use Punglish (simple Punjabi mixed with English). Avoid long pure-Punjabi sentences.\n- Other languages: Respond in that language clearly.\n\nYou are speaking to people who may not be fluent in English.",
+  "system_message":"You are Update247's Expert phone agent (female). Speak slowly and clearly. Follow the state machine strictly. Ask one question at a time. Use short sentences. Pause briefly between sentences. Do not repeat back the property name. Just say 'Thanks' and continue. Always save details as you learn them using save_caller_info. Language: Default English. Switch to caller language or hindi (Hinglish) or Punjabi (Punglish) only if the caller asks. Keep it simple in Hindi/Punjabi. Goal: Help Update247 customers with support, or guide new callers to demo, pricing, or onboarding.\n\nEXAMPLE: Instead of 'Please provide your property identification number so I can assist you.' Say: 'That's okay. I can help you. May I please have your property ID?' Break sentences into short parts with pauses.",
   "agent": {
     "name": "Update247 Expert Phone Agent",
     "persona": {
@@ -8,7 +8,7 @@
       "gender": "female",
       "accent": "clear",
       "speaking_style_rules": [
-        "Speak clearly.",
+        "Speak slowly and clearly.",
         "Use short sentences.",
         "Pause briefly between sentences.",
         "Avoid technical words.",
@@ -50,6 +50,10 @@
       {
         "name": "save_caller_info",
         "description": "Stores any collected caller/property/issue fields."
+      },
+      {
+        "name": "get_pricing_details",
+        "description": "Fetch current Update247 pricing and plans. Use when caller asks about pricing, cost, or plans. Ask caller if their property is a Hotel or Vacation Rental first."
       }
     ]
   },
@@ -62,6 +66,8 @@
     "intent": null,
     "issue_type": null,
     "issue_description": null,
+    "demo_choice": null,
+    "demo_preferred_time": null,
     "preferred_language": "en"
   },
 
@@ -104,10 +110,9 @@
     "if_refuses_details_continue": true,
     "reprompt": {
       "silence_timeout_seconds": 2,
-      "max_reprompts": 2,
+      "max_reprompts": 1,
       "reprompt_texts": [
-        "Sorry. I did not catch that.",
-        "Can you please say that again?"
+        "please say that again?"
       ]
     }
   },
@@ -216,6 +221,7 @@
         "field": "property_name",
         "type": "string",
         "min_length": 2
+		
       },
       "on_success": [
         { "tool": "save_caller_info", "args": { "property_name": "{{property_name}}" } }
@@ -364,6 +370,199 @@
         "Okay.",
         "Next step can be a demo, pricing, or onboarding.",
         "What would you like?"
+      ],
+      "on_input": [
+        {
+          "if_contains": ["pricing", "price", "cost", "rate", "plan", "how much"],
+          "actions": [
+            {
+              "tool": "get_pricing_details",
+              "args": { "property_type": "{{property_type_or_ask}}" },
+              "description": "Fetch current pricing. Ask caller if their property is a Hotel or Vacation Rental before calling."
+            }
+          ],
+          "say_after_tool": [
+            "Here are our current plans and pricing."
+          ],
+          "next": "STATE_END_SALES_HANDOFF"
+        },
+        {
+          "if_contains": ["demo", "demonstration", "show me", "see it"],
+          "next": "STATE_DEMO_OPTIONS"
+        },
+        {
+          "if_contains": ["onboarding", "start", "sign up", "get started"],
+          "next": "STATE_END_SALES_HANDOFF"
+        },
+        {
+          "default_next": "STATE_END_SALES_HANDOFF"
+        }
+      ],
+      "next": "STATE_END_SALES_HANDOFF"
+    },
+
+    "STATE_DEMO_OPTIONS": {
+      "type": "question",
+      "description": "Offer demo options: self-serve demo page or book a live demo with sales.",
+      "say": [
+        "Sure.",
+        "I can help with a demo.",
+        "You have two options."
+      ],
+      "ask": "Would you like to try our online demo page right now? Or would you prefer to book a live demo with one of our team members?",
+      "expects": {
+        "field": "demo_choice",
+        "type": "enum",
+        "values": ["self_serve", "book_demo"]
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "demo_choice": "{{demo_choice}}" } }
+      ],
+      "routing": [
+        { "if": { "demo_choice": "self_serve" }, "next": "STATE_DEMO_SELF_SERVE" },
+        { "if": { "demo_choice": "book_demo" }, "next": "STATE_DEMO_BOOK" }
+      ],
+      "on_input": [
+        {
+          "if_contains": ["online", "website", "try", "now", "self", "myself", "page", "link"],
+          "next": "STATE_DEMO_SELF_SERVE"
+        },
+        {
+          "if_contains": ["book", "schedule", "arrange", "live", "team", "person", "someone", "call back"],
+          "next": "STATE_DEMO_BOOK"
+        },
+        {
+          "default_next": "STATE_DEMO_BOOK"
+        }
+      ],
+      "next": "STATE_DEMO_BOOK"
+    },
+
+    "STATE_DEMO_SELF_SERVE": {
+      "type": "scripted_help",
+      "description": "Direct caller to the Update247 online demo page.",
+      "say": [
+        "Great.",
+        "You can try our demo right away.",
+        "Just go to update247.com and click on the Demo link at the top.",
+        "You will be able to explore the dashboard, bookings, rates, and reports.",
+        "No login is needed for the demo page."
+      ],
+      "next": "STATE_DEMO_SELF_SERVE_FOLLOWUP"
+    },
+
+    "STATE_DEMO_SELF_SERVE_FOLLOWUP": {
+      "type": "question",
+      "ask": "Would you also like to book a live demo with our team, or is there anything else I can help with?",
+      "expects": {
+        "field": "followup_choice",
+        "type": "enum",
+        "values": ["book_demo", "done", "other"]
+      },
+      "on_input": [
+        {
+          "if_contains": ["book", "schedule", "yes", "live", "arrange"],
+          "next": "STATE_DEMO_BOOK"
+        },
+        {
+          "if_contains": ["no", "done", "that's all", "nothing", "fine", "okay"],
+          "next": "STATE_END_SUCCESS"
+        },
+        {
+          "default_next": "STATE_END_SUCCESS"
+        }
+      ],
+      "next": "STATE_END_SUCCESS"
+    },
+
+    "STATE_DEMO_BOOK": {
+      "type": "question",
+      "description": "Collect caller details to book a live demo. Phone number is auto-populated from call state. Ask for property name if not already collected.",
+      "guard": { "if_missing": "property_name" },
+      "ask": "I'd be happy to book a demo for you. May I have your property name please?",
+      "expects": {
+        "field": "property_name",
+        "type": "string",
+        "min_length": 2
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "property_name": "{{property_name}}" } }
+      ],
+      "on_fail": {
+        "fallback_question": "No problem. I can still book the demo.",
+        "next": "STATE_DEMO_BOOK_NAME"
+      },
+      "next": "STATE_DEMO_BOOK_NAME"
+    },
+
+    "STATE_DEMO_BOOK_NAME": {
+      "type": "question",
+      "description": "Collect caller name if not already known.",
+      "guard": { "if_missing": "caller_name" },
+      "ask": "And may I have your name please?",
+      "expects": {
+        "field": "caller_name",
+        "type": "string",
+        "min_length": 2
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "caller_name": "{{caller_name}}" } }
+      ],
+      "on_fail": {
+        "next": "STATE_DEMO_BOOK_TIME"
+      },
+      "next": "STATE_DEMO_BOOK_TIME"
+    },
+
+    "STATE_DEMO_BOOK_TIME": {
+      "type": "question",
+      "description": "Ask for preferred day and time for the demo. Phone number is already captured from the call.",
+      "ask": "What day and time would work best for the demo?",
+      "expects": {
+        "field": "demo_preferred_time",
+        "type": "string",
+        "min_length": 3
+      },
+      "on_success": [
+        { "tool": "save_caller_info", "args": { "demo_preferred_time": "{{demo_preferred_time}}" } }
+      ],
+      "on_fail": {
+        "fallback_question": "No worries. Our team will call you to arrange a time.",
+        "next": "STATE_DEMO_BOOK_CONFIRM"
+      },
+      "next": "STATE_DEMO_BOOK_CONFIRM"
+    },
+
+    "STATE_DEMO_BOOK_CONFIRM": {
+      "type": "closure",
+      "description": "Confirm demo booking details. Phone number is auto-captured from the call.",
+      "actions": [
+        {
+          "tool": "save_caller_info",
+          "args": {
+            "caller_name": "{{caller_name}}",
+            "property_name": "{{property_name}}",
+            "demo_preferred_time": "{{demo_preferred_time}}",
+            "intent": "demo_booking",
+            "current_state": "DEMO_BOOKED"
+          }
+        }
+      ],
+      "say": [
+        "Thank you.",
+        "I have your details.",
+        "Our sales team will call you to confirm the demo.",
+        "We already have your phone number from this call.",
+        "Is there anything else I can help you with?"
+      ],
+      "on_input": [
+        {
+          "if_contains": ["no", "nothing", "that's all", "done", "bye"],
+          "next": "STATE_END_SALES_HANDOFF"
+        },
+        {
+          "default_next": "STATE_END_SUCCESS"
+        }
       ],
       "next": "STATE_END_SALES_HANDOFF"
     },
