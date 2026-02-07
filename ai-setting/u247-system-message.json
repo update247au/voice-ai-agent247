@@ -535,7 +535,7 @@
 
     "STATE_DEMO_BOOK_CONFIRM": {
       "type": "closure",
-      "description": "Confirm demo booking details. Phone number is auto-captured from the call.",
+      "description": "Confirm demo booking details. Phone number is auto-captured from the call. The save_caller_info response includes caller_phone_last3 (last 3 digits of caller number). Use these digits when confirming the callback number.",
       "actions": [
         {
           "tool": "save_caller_info",
@@ -548,11 +548,12 @@
           }
         }
       ],
+      "say_instructions": "After saving, read caller_phone_last3 from the tool response. Confirm the callback number by saying each of the last 3 digits separately. Example: 'Is it okay to call you back on the number you are calling from, ending in 7 5 8?' Then ask if there is anything else.",
       "say": [
         "Thank you.",
         "I have your details.",
         "Our sales team will call you to confirm the demo.",
-        "We already have your phone number from this call.",
+        "Is it okay to call you back on the number you are calling from, ending in {{caller_phone_last3_spaced}}?",
         "Is there anything else I can help you with?"
       ],
       "on_input": [

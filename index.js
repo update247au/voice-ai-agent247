@@ -1007,13 +1007,23 @@ fastify.register(async (fastify) => {
                         
                         console.log('[CallState Updated]', callState);
                         
+                        // Include caller phone last 3 digits so AI can reference it
+                        const phoneDigits = callerNumber ? callerNumber.replace(/[^0-9]/g, '') : '';
+                        const last3 = phoneDigits.length >= 3 ? phoneDigits.slice(-3) : phoneDigits;
+                        const responseData = { 
+                            success: true, 
+                            saved: args,
+                            caller_phone_last3: last3 || null,
+                            caller_phone_available: !!callerNumber
+                        };
+                        
                         // Send function result back to AI
                         const functionOutput = {
                             type: 'conversation.item.create',
                             item: {
                                 type: 'function_call_output',
                                 call_id: response.call_id,
-                                output: JSON.stringify({ success: true, saved: args })
+                                output: JSON.stringify(responseData)
                             }
                         };
                         openAiWs.send(JSON.stringify(functionOutput));
