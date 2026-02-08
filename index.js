@@ -609,7 +609,9 @@ fastify.register(async (fastify) => {
         call_end_time: null, // Track call end time
         phone_lookup_performed: false, // Track if phone lookup was attempted
         phone_lookup_found: false, // Track if phone lookup succeeded
-        phone_lookup_source: null // Track where property data came from
+        phone_lookup_source: null, // Track where property data came from
+        disconnected_by: null, // Track who disconnected: 'agent', 'caller', or 'inactivity'
+        disconnect_reason: null // Detailed reason for disconnect
     };
     
     // Silence detection state
@@ -623,9 +625,9 @@ fastify.register(async (fastify) => {
     // Inactivity timeout state (for ending call after extended silence)
     let inactivityTimer = null;
     let inactivityWarningCount = 0;
-    const INACTIVITY_FIRST_WARNING = 10000;  // 1 minute - "Are you still there?"
-    const INACTIVITY_FINAL_WARNING = 15000;  // 1.5 minutes - "I'll end the call"
-    const INACTIVITY_HANGUP = 20000;        // 2 minutes - Auto hangup
+    const INACTIVITY_FIRST_WARNING = 30000;  // 30 seconds - "Are you still there?"
+    const INACTIVITY_FINAL_WARNING = 45000;  // 45 seconds - "I'll end the call"
+    const INACTIVITY_HANGUP = 60000;        // 60 seconds - Auto hangup
     
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
@@ -1241,9 +1243,11 @@ fastify.register(async (fastify) => {
                         const reason = args.reason || 'completed';
                         console.log(`[END CALL] Ending call. Reason: ${reason}`);
                         
-                        // Record the end reason in call state
+                        // Record the end reason and who disconnected in call state
                         callState.end_reason = reason;
                         callState.ended_by_agent = true;
+                        callState.disconnected_by = reason === 'inactivity' ? 'inactivity' : 'agent';
+                        callState.disconnect_reason = reason;
                         
                         // Send function result back to AI with instruction to say goodbye
                         const functionOutput = {
@@ -1282,7 +1286,7 @@ fastify.register(async (fastify) => {
                                     connection.socket.close();
                                 }
                             }
-                        }, 5000); // 5 second delay to let goodbye be spoken
+                        }, 8000); // 8 second delay to let goodbye be spoken
                     }
                 }
 
@@ -1769,6 +1773,11 @@ fastify.register(async (fastify) => {
                     call_start_time: callStartTime.toISOString(),
                     call_end_time: callEndTime.toISOString()
                 },
+                disconnectInfo: {
+                    disconnected_by: callState.disconnected_by || 'unknown',
+                    disconnect_reason: callState.disconnect_reason || 'unknown',
+                    ended_by_agent: callState.ended_by_agent || false
+                },
                 webhookBody: webhookBody || null,
                 startTime: callStartTime.toISOString(),
                 endTime: callEndTime.toISOString(),
@@ -1832,6 +1841,17 @@ fastify.register(async (fastify) => {
         // Handle connection close: save transcript and close OpenAI connection
         connection.on('close', () => {
             console.log('[connection.close] Handler fired. Saving transcript and closing OpenAI connection.');
+            
+            // Determine who disconnected the call
+            if (!callState.disconnected_by) {
+                // If agent didn't initiate disconnect, caller hung up
+                callState.disconnected_by = 'caller';
+                callState.disconnect_reason = 'caller_hangup';
+                console.log('[connection.close] Caller disconnected the call.');
+            } else {
+                console.log(`[connection.close] Call was disconnected by: ${callState.disconnected_by} (reason: ${callState.disconnect_reason})`);
+            }
+            
             if (openAiWs.readyState === WebSocket.OPEN) openAiWs.close();
             saveTranscript().catch((err) => console.error('[connection.close] Error saving transcript:', err));
             console.log('Client disconnected.');
