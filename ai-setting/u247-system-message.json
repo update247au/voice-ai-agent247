@@ -200,6 +200,20 @@
         },
 
         {
+          "if_contains_in_call_reason": ["demo", "demonstration", "book demo", "schedule demo", "see demo"],
+          "actions": [
+            { "set_memory": { "intent": "sales" } },
+            { "tool": "save_caller_info", "args": { "intent": "sales", "call_reason": "{{call_reason}}" } }
+          ],
+          "next": "STATE_DEMO_OPTIONS"
+        },
+
+        {
+          "if_present": "demo_choice",
+          "next": "STATE_DEMO_OPTIONS"
+        },
+
+        {
           "if_missing": "call_reason",
           "next": "STATE_1_ASK_HOW_CAN_I_HELP"
         },
@@ -225,6 +239,20 @@
       "routing": [
         { "if": { "intent": "support" }, "next": "STATE_A_PROPERTY_NAME" },
         { "if": { "intent": "sales" }, "next": "STATE_H_SALES_MODE" }
+      ],
+      "on_input": [
+        {
+          "if_contains": ["demo", "demonstration", "book demo", "schedule demo"],
+          "next": "STATE_DEMO_OPTIONS"
+        },
+        {
+          "if": { "intent": "support" }, 
+          "next": "STATE_A_PROPERTY_NAME"
+        },
+        {
+          "if": { "intent": "sales" }, 
+          "next": "STATE_H_SALES_MODE"
+        }
       ],
       "on_fail": {
         "next": "STATE_F_TRIAGE"
@@ -402,9 +430,10 @@
             }
           ],
           "say_after_tool": [
-            "Here are our current plans and pricing."
+            "Here are our current plans and pricing.",
+            "Would you like to book a demo to see it in action?"
           ],
-          "next": "STATE_END_SALES_HANDOFF"
+          "next": "STATE_PRICING_FOLLOWUP"
         },
         {
           "if_contains": ["demo", "demonstration", "show me", "see it"],
@@ -412,6 +441,27 @@
         },
         {
           "if_contains": ["onboarding", "start", "sign up", "get started"],
+          "next": "STATE_END_SALES_HANDOFF"
+        },
+        {
+          "default_next": "STATE_END_SALES_HANDOFF"
+        }
+      ],
+      "next": "STATE_END_SALES_HANDOFF"
+    },
+
+    "STATE_PRICING_FOLLOWUP": {
+      "type": "question",
+      "description": "After showing pricing, ask if they want to book a demo.",
+      "ask": "Would you like to book a demo?",
+      "on_input": [
+        {
+          "if_contains": ["yes", "sure", "okay", "book", "demo", "schedule"],
+          "next": "STATE_DEMO_OPTIONS"
+        },
+        {
+          "if_contains": ["no", "not now", "later"],
+          "say": "No problem. Is there anything else I can help you with?",
           "next": "STATE_END_SALES_HANDOFF"
         },
         {
