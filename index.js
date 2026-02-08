@@ -1021,8 +1021,8 @@ fastify.register(async (fastify) => {
                         
                         // When demo is booked, add explicit spoken instruction with the digits
                         if (args.intent === 'demo_booking' && last3) {
-                            responseData.SPEAK_THIS = `Demo is all set. Is it okay to call you on the number you are calling from, which ends in ${last3Spaced}? Is there anything else I can help you with?`;
-                            responseData.INSTRUCTION = `You MUST say the above SPEAK_THIS text exactly. The last 3 digits of their phone number are ${last3Spaced}. Say each digit separately.`;
+                            responseData.SPEAK_THIS = `Demo is all set. Is it okay to call you on the number you are calling from, which ends in ${last3Spaced}?`;
+                            responseData.INSTRUCTION = `You MUST say the above SPEAK_THIS text exactly, then WAIT for the caller's response. The last 3 digits of their phone number are ${last3Spaced}. Say each digit separately.`;
                         }
                         
                         // Send function result back to AI
