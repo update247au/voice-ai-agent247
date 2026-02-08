@@ -620,6 +620,13 @@ fastify.register(async (fastify) => {
     let conversationTurns = 0; // Track number of exchanges
     let lastSilencePromptTime = 0; // Prevent rapid-fire silence prompts
     
+    // Inactivity timeout state (for ending call after extended silence)
+    let inactivityTimer = null;
+    let inactivityWarningCount = 0;
+    const INACTIVITY_FIRST_WARNING = 10000;  // 1 minute - "Are you still there?"
+    const INACTIVITY_FINAL_WARNING = 15000;  // 1.5 minutes - "I'll end the call"
+    const INACTIVITY_HANGUP = 20000;        // 2 minutes - Auto hangup
+    
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
     let callerAudioChunks = [];  // Buffer audio base64 chunks during speech
@@ -951,6 +958,84 @@ fastify.register(async (fastify) => {
             return;
         };
 
+        // Start inactivity timer after AI finishes speaking
+        const startInactivityTimer = () => {
+            // Clear any existing timer
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
+            
+            console.log('[Inactivity] Starting inactivity timer. Warning count:', inactivityWarningCount);
+            
+            let timeout;
+            if (inactivityWarningCount === 0) {
+                timeout = INACTIVITY_FIRST_WARNING;
+            } else if (inactivityWarningCount === 1) {
+                timeout = INACTIVITY_FINAL_WARNING - INACTIVITY_FIRST_WARNING; // 30 more seconds
+            } else {
+                timeout = INACTIVITY_HANGUP - INACTIVITY_FINAL_WARNING; // 30 more seconds
+            }
+            
+            inactivityTimer = setTimeout(() => {
+                inactivityWarningCount++;
+                console.log(`[Inactivity] Timer fired. Warning count now: ${inactivityWarningCount}`);
+                
+                if (inactivityWarningCount === 1) {
+                    // First warning at 1 minute
+                    console.log('[Inactivity] Sending first warning: Are you still there?');
+                    const prompt = {
+                        type: 'conversation.item.create',
+                        item: {
+                            type: 'message',
+                            role: 'user',
+                            content: [{ type: 'input_text', text: '[SYSTEM: Caller has been silent for 1 minute. Ask them: Are you still there?]' }]
+                        }
+                    };
+                    openAiWs.send(JSON.stringify(prompt));
+                    openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                    
+                } else if (inactivityWarningCount === 2) {
+                    // Final warning at 1.5 minutes
+                    console.log('[Inactivity] Sending final warning');
+                    const prompt = {
+                        type: 'conversation.item.create',
+                        item: {
+                            type: 'message',
+                            role: 'user',
+                            content: [{ type: 'input_text', text: '[SYSTEM: Caller still silent. Say: I have not heard from you. I will end the call now if you do not need anything else.]' }]
+                        }
+                    };
+                    openAiWs.send(JSON.stringify(prompt));
+                    openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                    
+                } else {
+                    // Hangup at 2 minutes
+                    console.log('[Inactivity] 2 minutes of silence. Ending call.');
+                    const prompt = {
+                        type: 'conversation.item.create',
+                        item: {
+                            type: 'message',
+                            role: 'user',
+                            content: [{ type: 'input_text', text: '[SYSTEM: Caller has not responded. Say goodbye and call the end_call function with reason "inactivity".]' }]
+                        }
+                    };
+                    openAiWs.send(JSON.stringify(prompt));
+                    openAiWs.send(JSON.stringify({ type: 'response.create' }));
+                }
+            }, timeout);
+        };
+        
+        // Reset inactivity timer when caller speaks
+        const resetInactivityTimer = () => {
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
+            inactivityWarningCount = 0;
+            console.log('[Inactivity] Timer reset - caller spoke');
+        };
+
         // Open event for OpenAI WebSocket
         openAiWs.on('open', async () => {
             console.log('Connected to the OpenAI Realtime API');
@@ -1214,6 +1299,10 @@ fastify.register(async (fastify) => {
                         silenceTimer = null;
                         console.log('[Silence Timer] ✓ Cancelled due to caller speech');
                     }
+                    
+                    // Reset inactivity timer when caller speaks
+                    resetInactivityTimer();
+                    
                     waitingForCaller = false;
                     silenceCount = 0; // Reset silence count when caller speaks
                     callerSpokeSinceLastResponse = true;
@@ -1293,14 +1382,16 @@ fastify.register(async (fastify) => {
                 // When AI finishes speaking audio, DO NOT auto-prompt on silence
                 // Only AI should wait for real caller input
                 if (response.type === 'response.audio.done' || response.type === 'response.audio_transcript.done') {
-                    console.log(`[AI FINISHED AUDIO] ${response.type} - Waiting for real caller input (silence detection disabled)`);
-                    // Silence timer disabled - let caller respond naturally
+                    console.log(`[AI FINISHED AUDIO] ${response.type} - Starting inactivity timer`);
+                    // Start inactivity timer when AI finishes speaking
+                    startInactivityTimer();
                 }
                 
-                // Also try response.done as fallback - DISABLED
+                // Also try response.done as fallback
                 if (response.type === 'response.done') {
-                    console.log('[response.done] Response completed - silence detection disabled');
-                    // Silence timer disabled - let caller respond naturally
+                    console.log('[response.done] Response completed - starting inactivity timer');
+                    // Start inactivity timer when AI finishes speaking
+                    startInactivityTimer();
                 }
 
 
