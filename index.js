@@ -1160,18 +1160,23 @@ fastify.register(async (fastify) => {
                         callState.end_reason = reason;
                         callState.ended_by_agent = true;
                         
-                        // Send function result back to AI first
+                        // Send function result back to AI with instruction to say goodbye
                         const functionOutput = {
                             type: 'conversation.item.create',
                             item: {
                                 type: 'function_call_output',
                                 call_id: response.call_id,
-                                output: JSON.stringify({ success: true, message: 'Call will be ended after goodbye.' })
+                                output: JSON.stringify({ 
+                                    success: true, 
+                                    SPEAK_THIS: 'Thank you for calling Update247. Have a great day. Bye for now!',
+                                    INSTRUCTION: 'You MUST say the SPEAK_THIS text exactly before the call ends.'
+                                })
                             }
                         };
                         openAiWs.send(JSON.stringify(functionOutput));
+                        openAiWs.send(JSON.stringify({ type: 'response.create' }));
                         
-                        // Give a short delay for the AI's goodbye to be spoken, then hang up
+                        // Give a longer delay for the AI's goodbye to be spoken, then hang up
                         setTimeout(async () => {
                             console.log('[END CALL] Hanging up via Twilio...');
                             
@@ -1192,7 +1197,7 @@ fastify.register(async (fastify) => {
                                     connection.socket.close();
                                 }
                             }
-                        }, 3000); // 3 second delay to let goodbye be spoken
+                        }, 5000); // 5 second delay to let goodbye be spoken
                     }
                 }
 
