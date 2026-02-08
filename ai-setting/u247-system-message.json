@@ -579,7 +579,7 @@
           }
         }
       ],
-      "after_tool_response": "MANDATORY: The tool response contains a SPEAK_THIS field. Say that text exactly, in a calm and friendly tone. After saying the SPEAK_THIS text, you MUST ask: Is there anything else I can help you with?",
+      "after_tool_response": "MANDATORY: The tool response contains a SPEAK_THIS field. Say that text exactly, in a calm and friendly tone. Then WAIT for the caller's response.",
       "say": [
         "Demo is all set.",
         "Is it okay to call you on the number you are calling from, which ends in [say each digit of caller_phone_last3 one by one]?"
