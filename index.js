@@ -1601,6 +1601,13 @@ fastify.register(async (fastify) => {
                     property_id: callState.phone_lookup_found ? callState.property_id : null,
                     property_name: callState.phone_lookup_found ? callState.property_name : null
                 },
+                demoBooking: {
+                    demo_preferred_date: callState.demo_preferred_date || null,
+                    demo_preferred_time: callState.demo_preferred_time || null,
+                    caller_name: callState.caller_name || null,
+                    property_name: callState.property_name || null,
+                    intent: callState.intent || null
+                },
                 tokenUsage: {
                     input_tokens: callState.tokens_input,
                     output_tokens: callState.tokens_output,
