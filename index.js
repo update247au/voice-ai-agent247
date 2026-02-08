@@ -1010,12 +1010,20 @@ fastify.register(async (fastify) => {
                         // Include caller phone last 3 digits so AI can reference it
                         const phoneDigits = callerNumber ? callerNumber.replace(/[^0-9]/g, '') : '';
                         const last3 = phoneDigits.length >= 3 ? phoneDigits.slice(-3) : phoneDigits;
+                        const last3Spaced = last3 ? last3.split('').join(' ') : '';
+                        
                         const responseData = { 
                             success: true, 
                             saved: args,
                             caller_phone_last3: last3 || null,
                             caller_phone_available: !!callerNumber
                         };
+                        
+                        // When demo is booked, add explicit spoken instruction with the digits
+                        if (args.intent === 'demo_booking' && last3) {
+                            responseData.SPEAK_THIS = `Demo is all set. Is it okay to call you on the number you are calling from, which ends in ${last3Spaced}? Is there anything else I can help you with?`;
+                            responseData.INSTRUCTION = `You MUST say the above SPEAK_THIS text exactly. The last 3 digits of their phone number are ${last3Spaced}. Say each digit separately.`;
+                        }
                         
                         // Send function result back to AI
                         const functionOutput = {
