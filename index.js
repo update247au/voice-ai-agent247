@@ -738,6 +738,18 @@ fastify.register(async (fastify) => {
                                 },
                                 required: ["feature"]
                             }
+                        },
+                        {
+                            type: "function",
+                            name: "end_call",
+                            description: "End the call politely. Call this AFTER saying goodbye to the caller. Use when: caller says bye/goodbye/thank you that's all/nothing else, OR when conversation is complete and caller has no more questions.",
+                            parameters: {
+                                type: "object",
+                                properties: {
+                                    reason: { type: "string", description: "Reason for ending call: completed, caller_goodbye, no_more_questions, escalated" }
+                                },
+                                required: ["reason"]
+                            }
                         }
                     ],
                     tool_choice: "auto"
@@ -1138,6 +1150,49 @@ fastify.register(async (fastify) => {
                             openAiWs.send(JSON.stringify(errorOutput));
                             openAiWs.send(JSON.stringify({ type: 'response.create' }));
                         }
+                    }
+
+                    if (functionName === 'end_call') {
+                        const reason = args.reason || 'completed';
+                        console.log(`[END CALL] Ending call. Reason: ${reason}`);
+                        
+                        // Record the end reason in call state
+                        callState.end_reason = reason;
+                        callState.ended_by_agent = true;
+                        
+                        // Send function result back to AI first
+                        const functionOutput = {
+                            type: 'conversation.item.create',
+                            item: {
+                                type: 'function_call_output',
+                                call_id: response.call_id,
+                                output: JSON.stringify({ success: true, message: 'Call will be ended after goodbye.' })
+                            }
+                        };
+                        openAiWs.send(JSON.stringify(functionOutput));
+                        
+                        // Give a short delay for the AI's goodbye to be spoken, then hang up
+                        setTimeout(async () => {
+                            console.log('[END CALL] Hanging up via Twilio...');
+                            
+                            if (twilioClient && callSid) {
+                                try {
+                                    await twilioClient.calls(callSid).update({ status: 'completed' });
+                                    console.log('[END CALL] ✓ Call ended successfully via Twilio');
+                                } catch (err) {
+                                    console.error('[END CALL] ✗ Failed to end call via Twilio:', err.message);
+                                    // Fallback: close the websocket
+                                    if (connection && connection.socket) {
+                                        connection.socket.close();
+                                    }
+                                }
+                            } else {
+                                console.log('[END CALL] No Twilio client or callSid available, closing websocket');
+                                if (connection && connection.socket) {
+                                    connection.socket.close();
+                                }
+                            }
+                        }, 3000); // 3 second delay to let goodbye be spoken
                     }
                 }
 

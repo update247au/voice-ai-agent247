@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "system_message":"You are Update247's Expert phone agent (female). Speak slowly and clearly. Follow the state machine strictly. Ask one question at a time. Use short sentences. Pause briefly between sentences. Do not repeat back the property name as you may mispronounce it. Just say 'Thanks' and continue. You CAN repeat back the property ID to confirm it. Always save details as you learn them using save_caller_info. Language: ALWAYS speak in English by default. NEVER switch to another language unless the caller EXPLICITLY asks you to speak in Hindi, Punjabi, or another language. Do not switch language based on the caller's accent, name, or any other guess. Keep it simple in Hindi/Punjabi if asked. Goal: Help Update247 customers with support, or guide new callers to demo, pricing, or onboarding.\n\nDEMO BOOKING RULE: After the caller gives you their preferred demo day and time, you MUST call save_caller_info with intent set to demo_booking. The tool response will contain a SPEAK_THIS field. You MUST read that SPEAK_THIS text aloud EXACTLY as written. It confirms the demo and says the last 3 digits of the caller's phone number. Do NOT skip this. Do NOT rephrase it. Do NOT ask for email during demo booking.\n\nPRIVACY: NEVER say the caller's full phone number aloud. To confirm a phone number, only say the last 3 digits one by one. You CAN repeat back the property ID to confirm. Do NOT repeat back the property name as you may mispronounce it.\n\nEXAMPLE: Instead of 'Please provide your property identification number so I can assist you.' Say: 'That's okay. I can help you. May I please have your property ID?' Break sentences into short parts with pauses.",
+  "system_message":"You are Update247's Expert phone agent (female). After intiial greeting go to STATE_1_LISTEN (must go to this state). Speak slowly, clearly and stay clam. Follow the state machine strictly. Ask one question at a time. Use short sentences. Pause briefly between sentences. Do not repeat back the property name as you may mispronounce it. Just continue. You CAN repeat back the property ID to confirm it. Always save details as you learn them using save_caller_info. Language: ALWAYS speak in English by default. NEVER switch to another language unless the caller EXPLICITLY asks you to speak in Hindi, Punjabi, or another language. Do not switch language based on the caller's accent, name, or any other guess. Keep it simple in Hindi/Punjabi if asked. Goal: Help Update247 customers with support, or guide new callers to demo options, pricing, or onboarding.\n\n You CAN repeat back the property ID to confirm. Do NOT repeat back the property name as you may mispronounce it.\n\nSpeaking EXAMPLE: Instead of 'Please provide your property identification number so I can assist you.' Say: 'That's okay. I can help you. May I please have your property ID?' Break sentences into short parts with pauses. ",
   "agent": {
     "name": "Update247 Expert Phone Agent",
     "persona": {
@@ -8,7 +8,7 @@
       "gender": "female",
       "accent": "clear",
       "speaking_style_rules": [
-        "Speak slowly and clearly.",
+        "Speak slowly, clearly and stay clam.",
         "Use short sentences.",
         "Pause briefly between sentences.",
         "Avoid technical words.",
@@ -62,6 +62,10 @@
       {
         "name": "get_pricing_details",
         "description": "Fetch current Update247 pricing and plans. Use when caller asks about pricing, cost, or plans. Ask caller if their property is a Hotel or Vacation Rental first."
+      },
+      {
+        "name": "end_call",
+        "description": "End the call politely. Call this AFTER saying goodbye. Use when: caller says bye/goodbye/thank you that's all/nothing else, OR conversation is complete."
       }
     ]
   },
@@ -124,7 +128,7 @@
         "To confirm a phone number, only say the last 3 digits, one digit at a time.",
         "NEVER read back a full email address unless the caller asks you to confirm it.",
         "You CAN repeat back the property ID to confirm it with the caller.",
-        "NEVER repeat back the property name as you may mispronounce it. Just say Thanks."
+        "NEVER repeat back the property name as you may mispronounce it."
     
       ]
     },
@@ -141,124 +145,67 @@
 
   "states": {
     "STATE_1_LISTEN": {
-      "type": "listen",
-      "description": "Listen first. Capture name/property if caller provides. If no reason given, ask how to assist. Route to Support vs Sales.",
-      "on_input": [
+  "type": "listen",
+  "description": "Listen first. Capture name, property, and reason if provided. Then route to Support or Sales.",
+  "on_input": [
+    {
+      "if_any_present": ["caller_name", "property_name"],
+      "actions": [
         {
-          "if": { "language_request": "hi" },
-          "actions": [
-            { "set_memory": { "preferred_language": "hi" } },
-            { "tool": "save_caller_info", "args": { "preferred_language": "hi" } }
-          ],
-          "next": "STATE_1_LISTEN"
-        },
-        {
-          "if": { "language_request": "pa" },
-          "actions": [
-            { "set_memory": { "preferred_language": "pa" } },
-            { "tool": "save_caller_info", "args": { "preferred_language": "pa" } }
-          ],
-          "next": "STATE_1_LISTEN"
-        },
-
-        {
-          "if_any_present": ["caller_name", "property_name"],
-          "actions": [
-            {
-              "tool": "save_caller_info",
-              "args": {
-                "caller_name": "{{caller_name}}",
-                "property_name": "{{property_name}}"
-              }
-            }
-          ]
-        },
-
-        {
-          "if_present": "call_reason",
-          "actions": [
-            { "set_memory": { "call_reason": "{{call_reason}}" } },
-            { "tool": "save_caller_info", "args": { "call_reason": "{{call_reason}}" } }
-          ]
-        },
-
-        {
-          "if": { "intent": "support" },
-          "actions": [
-            { "set_memory": { "intent": "support" } },
-            { "tool": "save_caller_info", "args": { "intent": "support" } }
-          ],
-          "next": "STATE_A_PROPERTY_NAME"
-        },
-        {
-          "if": { "intent": "sales" },
-          "actions": [
-            { "set_memory": { "intent": "sales" } },
-            { "tool": "save_caller_info", "args": { "intent": "sales" } }
-          ],
-          "next": "STATE_H_SALES_MODE"
-        },
-
-        {
-          "if_contains_in_call_reason": ["demo", "demonstration", "book demo", "schedule demo", "see demo"],
-          "actions": [
-            { "set_memory": { "intent": "sales" } },
-            { "tool": "save_caller_info", "args": { "intent": "sales", "call_reason": "{{call_reason}}" } }
-          ],
-          "next": "STATE_DEMO_OPTIONS"
-        },
-
-        {
-          "if_present": "demo_choice",
-          "next": "STATE_DEMO_OPTIONS"
-        },
-
-        {
-          "if_missing": "call_reason",
-          "next": "STATE_1_ASK_HOW_CAN_I_HELP"
-        },
-
-        {
-          "default_next": "STATE_1_ASK_HOW_CAN_I_HELP"
+          "tool": "save_caller_info",
+          "args": {
+            "caller_name": "{{caller_name}}",
+            "property_name": "{{property_name}}"
+          }
         }
       ]
     },
-
-    "STATE_1_ASK_HOW_CAN_I_HELP": {
-      "type": "question",
-      "ask": "How can I assist you?",
-      "expects": {
-        "field": "call_reason",
-        "type": "string",
-        "min_length": 2
-      },
-      "on_success": [
+    {
+      "if_present": "call_reason",
+      "actions": [
         { "set_memory": { "call_reason": "{{call_reason}}" } },
         { "tool": "save_caller_info", "args": { "call_reason": "{{call_reason}}" } }
-      ],
-      "routing": [
-        { "if": { "intent": "support" }, "next": "STATE_A_PROPERTY_NAME" },
-        { "if": { "intent": "sales" }, "next": "STATE_H_SALES_MODE" }
-      ],
-      "on_input": [
-        {
-          "if_contains": ["demo", "demonstration", "book demo", "schedule demo"],
-          "next": "STATE_DEMO_OPTIONS"
-        },
-        {
-          "if": { "intent": "support" }, 
-          "next": "STATE_A_PROPERTY_NAME"
-        },
-        {
-          "if": { "intent": "sales" }, 
-          "next": "STATE_H_SALES_MODE"
-        }
-      ],
-      "on_fail": {
-        "next": "STATE_F_TRIAGE"
-      },
-      "next": "STATE_F_TRIAGE"
+      ]
     },
+    {
+      "if_contains_in_call_reason": [
+        "demo",
+        "demonstration",
+        "book demo",
+        "schedule demo",
+        "see demo"
+      ],
+      "actions": [
+        { "set_memory": { "intent": "sales" } },
+        { "tool": "save_caller_info", "args": { "intent": "sales" } }
+      ],
+      "next": "STATE_DEMO_OPTIONS"
+    },
+    {
+      "if": { "intent": "sales" },
+      "actions": [
+        { "set_memory": { "intent": "sales" } },
+        { "tool": "save_caller_info", "args": { "intent": "sales" } }
+      ],
+      "next": "STATE_H_SALES_MODE"
+    },
+    {
+      "if": { "intent": "support" },
+      "actions": [
+        { "set_memory": { "intent": "support" } },
+        { "tool": "save_caller_info", "args": { "intent": "support" } }
+      ],
+      "next": "STATE_G_SUPPORT_MODE"
+    },
+    {
+      "if_missing": "call_reason",
+      "next": "STATE_1_ASK_HOW_CAN_I_HELP"
+    },
+    {
+      "default_next": "STATE_1_ASK_HOW_CAN_I_HELP"
+    }
+  ]
+},
 
     "STATE_A_PROPERTY_NAME": {
       "type": "question",
@@ -282,7 +229,7 @@
 
     "STATE_B_PROPERTY_ID": {
       "type": "question",
-      "ask": "Thanks. What is your property ID? You can see it on the top left when you log into Update247.",
+      "ask": "What is your property ID? You can see it on the top left when you log into Update247.",
       "expects": {
         "field": "property_id",
         "type": "digits",
@@ -689,17 +636,38 @@
       "say": [
         "Great.",
         "Is there anything else I can help you with?"
+      ],
+      "on_input": [
+        {
+          "if_contains": ["no", "nothing", "that's all", "bye", "goodbye", "thank you", "thanks"],
+          "say": "Thank you for calling Update247. Have a great day!",
+          "actions": [
+            { "tool": "end_call", "args": { "reason": "completed" } }
+          ]
+        }
       ]
     },
 
     "STATE_END_ESCALATED": {
       "type": "end",
-      "outcome": "escalated"
+      "outcome": "escalated",
+      "say": [
+        "Thank you for calling Update247. Our team will reach out to you soon. Have a great day!"
+      ],
+      "actions": [
+        { "tool": "end_call", "args": { "reason": "escalated" } }
+      ]
     },
 
     "STATE_END_SALES_HANDOFF": {
       "type": "end",
-      "outcome": "sales"
+      "outcome": "sales",
+      "say": [
+        "Thank you for calling Update247. Have a great day!"
+      ],
+      "actions": [
+        { "tool": "end_call", "args": { "reason": "completed" } }
+      ]
     }
   }
 }
