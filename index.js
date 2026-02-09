@@ -627,7 +627,7 @@ fastify.register(async (fastify) => {
     let inactivityWarningCount = 0;
     const INACTIVITY_FIRST_WARNING = 10000;  // 10 seconds - "Are you still there?"
     const INACTIVITY_FINAL_WARNING = 15000;  // 15 seconds - "I'll end the call"
-    const INACTIVITY_HANGUP =   30000;        // 60 seconds - Auto hangup
+    const INACTIVITY_HANGUP =   20000;        // 60 seconds - Auto hangup
     
     // For caller speech transcription via Whisper API
     let isCapturingCallerSpeech = false;
