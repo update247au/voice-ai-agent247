@@ -49,7 +49,8 @@ export const lookupPropertyByPhone = async (phoneNumber) => {
     }
 };
 
-// Helper function to find phone match (handles different formats)
+// Helper function to find ALL phone matches (handles different formats)
+// Returns all properties associated with this phone number
 export const findPhoneMatch = (phoneNumber, mappings) => {
     if (!phoneNumber || !mappings || !Array.isArray(mappings)) {
         console.log('[Phone Lookup] Invalid input - phoneNumber:', phoneNumber, 'mappings type:', Array.isArray(mappings), 'is null:', mappings === null);
@@ -62,31 +63,48 @@ export const findPhoneMatch = (phoneNumber, mappings) => {
     const normalized = String(phoneNumber).replace(/\D/g, '');
     console.log('[Phone Lookup] Normalized caller number:', normalized);
     
+    // Collect ALL matching properties (caller may have multiple properties)
+    const matchedProperties = [];
+    const seenPropertyIds = new Set();
+    
     for (const mapping of mappings) {
         const mappingNormalized = String(mapping.phone_number).replace(/\D/g, '');
-        console.log('[Phone Lookup] Comparing against:', mapping.phone_number, '→ normalized:', mappingNormalized);
         
-        // Check exact match on normalized numbers (most reliable)
-        if (normalized === mappingNormalized) {
-            console.log(`[Phone Lookup] ✓ EXACT MATCH FOUND: ${phoneNumber} → ${mapping.property_name} (ID: ${mapping.property_id})`);
-            return {
+        // Check if this phone number matches
+        const isMatch = normalized === mappingNormalized || phoneNumber === mapping.phone_number;
+        
+        if (isMatch && !seenPropertyIds.has(mapping.property_id)) {
+            console.log(`[Phone Lookup] ✓ MATCH FOUND: ${phoneNumber} → ${mapping.property_name} (ID: ${mapping.property_id})`);
+            matchedProperties.push({
                 property_id: mapping.property_id,
                 property_name: mapping.property_name,
                 phone_number: mapping.phone_number
-            };
-        }
-        
-        // Check literal match
-        if (phoneNumber === mapping.phone_number) {
-            console.log(`[Phone Lookup] ✓ LITERAL MATCH FOUND: ${phoneNumber} → ${mapping.property_name} (ID: ${mapping.property_id})`);
-            return {
-                property_id: mapping.property_id,
-                property_name: mapping.property_name,
-                phone_number: mapping.phone_number
-            };
+            });
+            seenPropertyIds.add(mapping.property_id);
         }
     }
     
-    console.log(`[Phone Lookup] ✗ NO MATCH found for: ${phoneNumber} (normalized: ${normalized})`);
-    return null;
+    if (matchedProperties.length === 0) {
+        console.log(`[Phone Lookup] ✗ NO MATCH found for: ${phoneNumber} (normalized: ${normalized})`);
+        return null;
+    }
+    
+    // Return structured result with all properties
+    const result = {
+        is_existing_client: true,
+        property_count: matchedProperties.length,
+        has_multiple_properties: matchedProperties.length > 1,
+        properties: matchedProperties,
+        // For backward compatibility, also include first property at top level
+        property_id: matchedProperties[0].property_id,
+        property_name: matchedProperties[0].property_name,
+        phone_number: matchedProperties[0].phone_number
+    };
+    
+    console.log(`[Phone Lookup] ✓ Found ${matchedProperties.length} property(ies) for this caller`);
+    if (matchedProperties.length > 1) {
+        console.log('[Phone Lookup] Properties:', matchedProperties.map(p => `${p.property_name} (${p.property_id})`).join(', '));
+    }
+    
+    return result;
 };
