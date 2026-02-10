@@ -67,9 +67,9 @@ export const SHOW_TIMING_MATH = false;
 
 // Inactivity timeout settings (in milliseconds)
 export const INACTIVITY_SETTINGS = {
-    FIRST_WARNING: 10000,   // 10 seconds - "Are you still there?"
-    FINAL_WARNING: 15000,   // 15 seconds - "I'll end the call"
-    HANGUP: 20000           // 20 seconds - Auto hangup
+    FIRST_WARNING: 30000,   // 30 seconds - "Are you still there?"
+    FINAL_WARNING: 45000,   // 45 seconds - "I'll end the call"
+    HANGUP: 60000           // 60 seconds - Auto hangup
 };
 
 // Default system message

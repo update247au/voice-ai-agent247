@@ -76,6 +76,9 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
             let isCapturingCallerSpeech = false;
             let callerAudioChunks = [];
             
+            // Track AI response state for proper inactivity timing
+            let aiResponseComplete = false;
+            
             // Initialize call state
             let callState = createInitialCallState(callStartTime);
 
@@ -251,6 +254,7 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         }
                         
                         inactivityHandler.resetInactivityTimer();
+                        aiResponseComplete = false; // Caller is speaking, reset response tracking
                         
                         waitingForCaller = false;
                         silenceCount = 0;
@@ -318,9 +322,12 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         }
                     }
                     
-                    // Start inactivity timer when AI finishes speaking
-                    if (response.type === 'response.audio.done' || response.type === 'response.done') {
-                        inactivityHandler.startInactivityTimer();
+                    // Track when AI response is complete (but audio may still be playing)
+                    // The actual inactivity timer will start when the last mark is received
+                    // indicating audio playback has finished
+                    if (response.type === 'response.done') {
+                        aiResponseComplete = true;
+                        console.log('[AI Response] Generation complete. Waiting for audio playback to finish...');
                     }
 
                     // Handle audio output
@@ -487,6 +494,13 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         case 'mark':
                             if (markQueue.length > 0) {
                                 markQueue.shift();
+                            }
+                            // When all marks are cleared and AI response is complete,
+                            // audio has finished playing - NOW start inactivity timer
+                            if (markQueue.length === 0 && aiResponseComplete) {
+                                console.log('[Inactivity] Audio playback finished. Starting inactivity timer now.');
+                                inactivityHandler.startInactivityTimer();
+                                aiResponseComplete = false; // Reset for next response
                             }
                             break;
                     }
