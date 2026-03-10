@@ -88,7 +88,7 @@ export const createSessionUpdate = (callSettings) => {
         type: 'session.update',
         session: {
             type: 'realtime',
-            model: "gpt-realtime",
+            model: "gpt-realtime-1.5",
             output_modalities: ["audio"],
             audio: {
                 input: { format: { type: 'audio/pcmu' }, turn_detection: { type: "server_vad" } },

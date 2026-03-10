@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "initial_greeting": "Greet the user with : This is Emma from Update 2 4 7. How can I assist today?",
   "pricing": {
-    "model": "gpt-realtime",
+    "model": "gpt-realtime-1.5",
     "input_tokens_per_1m": 32.00,
     "output_tokens_per_1m": 64.00,
     "note": "Audio Realtime API pricing - gpt-realtime"
