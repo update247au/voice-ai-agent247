@@ -54,4 +54,97 @@ export const startRecording = async (callSid) => {
     }
 };
 
+// Check recording status
+export const getRecordingStatus = async (recordingSid) => {
+    if (!twilioClient || !recordingSid) {
+        return { status: 'error', error: 'No client or recordingSid' };
+    }
+
+    try {
+        const recording = await twilioClient.recordings(recordingSid).fetch();
+        return { 
+            status: recording.status, 
+            duration: recording.duration,
+            uri: recording.uri
+        };
+    } catch (err) {
+        console.error('[Recording] Failed to get status:', err.message);
+        return { status: 'error', error: err.message };
+    }
+};
+
+// Download recording from Twilio (with retry for processing delay)
+export const downloadRecording = async (recordingSid, options = {}) => {
+    const {
+        maxRetries = 10,
+        initialDelayMs = 30000,  // Wait 30s before first attempt
+        retryDelayMs = 15000,    // Wait 15s between retries
+        format = 'mp3'           // mp3 or wav
+    } = options;
+
+    if (!twilioClient || !recordingSid) {
+        console.log('[Recording Download] Cannot download: No client or recordingSid');
+        return { success: false, error: 'No client or recordingSid' };
+    }
+
+    console.log(`[Recording Download] Waiting ${initialDelayMs/1000}s before first attempt...`);
+    await sleep(initialDelayMs);
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[Recording Download] Attempt ${attempt}/${maxRetries} for ${recordingSid}`);
+            
+            // Check if recording is ready
+            const recording = await twilioClient.recordings(recordingSid).fetch();
+            
+            if (recording.status !== 'completed') {
+                console.log(`[Recording Download] Status: ${recording.status}, waiting...`);
+                if (attempt < maxRetries) {
+                    await sleep(retryDelayMs);
+                    continue;
+                }
+                return { success: false, error: `Recording not ready after ${maxRetries} attempts. Status: ${recording.status}` };
+            }
+
+            // Recording is ready - download it
+            const mediaUrl = `https://api.twilio.com${recording.uri.replace('.json', `.${format}`)}`;
+            console.log(`[Recording Download] Downloading from: ${mediaUrl}`);
+
+            const response = await fetch(mediaUrl, {
+                headers: {
+                    'Authorization': 'Basic ' + Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64')
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            console.log(`[Recording Download] ✓ Downloaded ${buffer.length} bytes`);
+            return { 
+                success: true, 
+                buffer: buffer,
+                duration: recording.duration,
+                format: format,
+                contentType: format === 'mp3' ? 'audio/mpeg' : 'audio/wav',
+                filename: `recording-${recordingSid}.${format}`
+            };
+
+        } catch (err) {
+            console.error(`[Recording Download] Attempt ${attempt} failed:`, err.message);
+            if (attempt < maxRetries) {
+                await sleep(retryDelayMs);
+            }
+        }
+    }
+
+    return { success: false, error: `Failed after ${maxRetries} attempts` };
+};
+
+// Helper sleep function
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 export { twilioClient };

@@ -2,11 +2,11 @@
 
 import WebSocket from 'ws';
 import { OPENAI_API_KEY, LOG_EVENT_TYPES, SHOW_TIMING_MATH, USE_REALTIME_TRANSCRIPTION } from '../config/index.js';
-import { getTwilioClient, startRecording } from '../services/twilio.js';
+import { getTwilioClient, startRecording, downloadRecording } from '../services/twilio.js';
 import { lookupPropertyByPhone } from '../services/phoneLookup.js';
 import { transcribeAudio } from '../services/transcription.js';
-import { saveTranscriptToStorage, saveBackupTranscript } from '../services/storage.js';
-import { sendCallTranscriptEmail } from '../services/email.js';
+import { saveTranscriptToStorage, saveBackupTranscript, uploadRecordingToStorage } from '../services/storage.js';
+import { sendCallTranscriptEmail, sendCallTranscriptWithRecording } from '../services/email.js';
 import { createInactivityHandler } from '../handlers/inactivity.js';
 import { createSessionUpdate, createInitialGreeting, getOpenAIWebSocketUrl, getOpenAIWebSocketHeaders } from '../handlers/openaiSession.js';
 import { 
@@ -664,8 +664,57 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                 const backupFilename = generateBackupFilename(callerNumber, callSid, streamSid);
                 await saveBackupTranscript(backupFilename, payload);
 
-                // Send email notification
+                // Send email notification (without recording first - recording takes time to process)
                 await sendCallTranscriptEmail(transcript, filename);
+
+                // Process recording in background (don't block call teardown)
+                if (recordingSid) {
+                    processRecordingInBackground(recordingSid, transcript, filename);
+                }
+            };
+
+            // Background recording processor - downloads, uploads to GCS, and sends email with attachment
+            const processRecordingInBackground = async (recSid, transcript, transcriptFilename) => {
+                console.log(`[Recording Background] Starting background processing for ${recSid}`);
+                
+                try {
+                    // Download recording from Twilio (with retries for processing delay)
+                    const downloadResult = await downloadRecording(recSid, {
+                        maxRetries: 12,         // Try for up to ~3 minutes
+                        initialDelayMs: 30000,  // Wait 30s before first attempt
+                        retryDelayMs: 15000,    // 15s between retries
+                        format: 'mp3'
+                    });
+
+                    if (!downloadResult.success) {
+                        console.error(`[Recording Background] Failed to download: ${downloadResult.error}`);
+                        return;
+                    }
+
+                    // Upload to GCS
+                    const recordingFilename = `recording-${transcript.callerNumber || 'unknown'}-${new Date().toISOString().split('T')[0]}-${recSid}.mp3`;
+                    const uploadResult = await uploadRecordingToStorage(
+                        recordingFilename, 
+                        downloadResult.buffer, 
+                        downloadResult.contentType
+                    );
+
+                    if (uploadResult.success) {
+                        console.log(`[Recording Background] ✓ Recording uploaded to ${uploadResult.location}`);
+                    }
+
+                    // Send follow-up email with recording attached
+                    await sendCallTranscriptWithRecording(transcript, transcriptFilename, {
+                        buffer: downloadResult.buffer,
+                        filename: recordingFilename,
+                        contentType: downloadResult.contentType
+                    });
+
+                    console.log(`[Recording Background] ✓ Complete - recording processed and emailed`);
+
+                } catch (err) {
+                    console.error(`[Recording Background] Error processing recording: ${err.message}`);
+                }
             };
 
             // Connection close handler

@@ -219,4 +219,31 @@ export const loadAgentSettings = async () => {
     }
 };
 
+// Upload audio recording to GCS
+export const uploadRecordingToStorage = async (filename, buffer, contentType = 'audio/mpeg') => {
+    if (!storage || !GCS_BUCKET) {
+        console.log('[Recording Upload] GCS not configured, cannot upload recording');
+        return { success: false, error: 'GCS not configured' };
+    }
+
+    try {
+        const recordingsPath = `recordings/${filename}`;
+        const file = storage.bucket(GCS_BUCKET).file(recordingsPath);
+        
+        await file.save(buffer, { 
+            contentType: contentType,
+            metadata: {
+                cacheControl: 'public, max-age=31536000'
+            }
+        });
+        
+        const gcsUrl = `gs://${GCS_BUCKET}/${recordingsPath}`;
+        console.log(`[Recording Upload] ✓ Recording uploaded to ${gcsUrl}`);
+        return { success: true, location: gcsUrl, path: recordingsPath };
+    } catch (err) {
+        console.error(`[Recording Upload] ✗ Failed to upload recording: ${err.message}`);
+        return { success: false, error: err.message };
+    }
+};
+
 export { storage, GCS_BUCKET };

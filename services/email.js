@@ -132,6 +132,97 @@ Full transcript attached as JSON file.
     }
 };
 
+// Send call transcript email WITH audio recording attached
+export const sendCallTranscriptWithRecording = async (transcript, filename, recording) => {
+    if (!transporter) {
+        console.log('[Email] Cannot send email: No transporter configured');
+        return { success: false, error: 'Email not configured' };
+    }
+
+    if (!EMAIL_CONFIG.NOTIFY_EMAIL) {
+        console.log('[Email] Cannot send email: NOTIFY_EMAIL not set');
+        return { success: false, error: 'NOTIFY_EMAIL not configured' };
+    }
+
+    try {
+        const fromEmail = EMAIL_CONFIG.SES_FROM_EMAIL || 
+            (EMAIL_CONFIG.SMTP_USER && EMAIL_CONFIG.SMTP_USER.includes('@') ? EMAIL_CONFIG.SMTP_USER : null) || 
+            'noreply@update247.com.au';
+        
+        const callState = transcript.callState || {};
+        const disconnectInfo = transcript.disconnectInfo || {};
+        const tokenUsage = transcript.tokenUsage || {};
+        
+        const emailBody = `
+Call Transcript Summary
+========================
+
+Call Details:
+- Caller Number: ${transcript.callerNumber || 'Unknown'}
+- Callee Number: ${transcript.calleeNumber || 'Unknown'}
+- Call SID: ${transcript.callSid || 'N/A'}
+- Duration: ${tokenUsage.call_duration_formatted || 'Unknown'}
+- Start Time: ${transcript.startTime || 'Unknown'}
+- End Time: ${transcript.endTime || 'Unknown'}
+
+Caller Information:
+- Property ID: ${callState.property_id || 'Not provided'}
+- Property Name: ${callState.property_name || 'Not provided'}
+- Caller Name: ${callState.caller_name || 'Not provided'}
+- Caller Email: ${callState.caller_email || 'Not provided'}
+- Existing Client: ${callState.is_existing_client !== null ? (callState.is_existing_client ? 'Yes' : 'No') : 'Not determined'}
+- Routed To: ${callState.routing ? callState.routing.toUpperCase() : 'Not routed'}
+
+Disconnect Info:
+- Disconnected By: ${disconnectInfo.disconnected_by || 'Unknown'}
+- Reason: ${disconnectInfo.disconnect_reason || 'Unknown'}
+
+Token Usage:
+- Input Tokens: ${tokenUsage.input_tokens || 0}
+- Output Tokens: ${tokenUsage.output_tokens || 0}
+- Estimated Cost: $${tokenUsage.estimated_cost_usd?.toFixed(6) || '0.00'}
+
+Issue Description:
+${callState.issue_description || 'No issue recorded'}
+
+---
+Full transcript and call recording attached.
+        `.trim();
+
+        const attachments = [
+            {
+                filename: filename,
+                content: JSON.stringify(transcript, null, 2),
+                contentType: 'application/json'
+            }
+        ];
+
+        // Add recording if provided
+        if (recording && recording.buffer) {
+            attachments.push({
+                filename: recording.filename || 'call-recording.mp3',
+                content: recording.buffer,
+                contentType: recording.contentType || 'audio/mpeg'
+            });
+        }
+
+        const mailOptions = {
+            from: fromEmail,
+            to: EMAIL_CONFIG.NOTIFY_EMAIL,
+            subject: `Call Transcript + Recording - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
+            text: emailBody,
+            attachments: attachments
+        };
+
+        const result = await transporter.sendMail(mailOptions);
+        console.log(`[Email] ✓ Call transcript WITH recording sent to ${EMAIL_CONFIG.NOTIFY_EMAIL}`);
+        return { success: true, messageId: result.messageId };
+    } catch (error) {
+        console.error('[Email] ✗ Failed to send email with recording:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
 // Test email configuration
 export const testEmailConnection = async () => {
     if (!transporter) {
