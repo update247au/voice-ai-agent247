@@ -564,8 +564,18 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                 }
             });
 
+            // Guard to prevent duplicate transcript saves/emails
+            let transcriptSaved = false;
+
             // Save transcript function
             const saveTranscript = async () => {
+                // Prevent duplicate saves (both Twilio stop and connection close fire)
+                if (transcriptSaved) {
+                    console.log('[saveTranscript] Already saved, skipping duplicate.');
+                    return;
+                }
+                transcriptSaved = true;
+
                 logger.callSummary(callState, callerNumber, calleeNumber);
 
                 // Estimate tokens if not captured
