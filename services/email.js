@@ -63,7 +63,10 @@ export const sendCallTranscriptEmail = async (transcript, filename) => {
     }
 
     try {
-        const fromEmail = EMAIL_CONFIG.SMTP_USER || EMAIL_CONFIG.SES_FROM_EMAIL || 'noreply@update247.com.au';
+        // Use SES_FROM_EMAIL first, then SMTP_USER only if it looks like an email (contains @)
+        const fromEmail = EMAIL_CONFIG.SES_FROM_EMAIL || 
+            (EMAIL_CONFIG.SMTP_USER && EMAIL_CONFIG.SMTP_USER.includes('@') ? EMAIL_CONFIG.SMTP_USER : null) || 
+            'noreply@update247.com.au';
         
         // Format call summary for email body
         const callState = transcript.callState || {};
