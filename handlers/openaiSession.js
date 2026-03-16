@@ -69,6 +69,18 @@ export const getOpenAITools = () => {
         },
         {
             type: "function",
+            name: "get_faq_answer",
+            description: "Search the FAQ database for answers to common questions about Update247. Use when caller asks general questions about the product, features, pricing, support, setup, or how things work.",
+            parameters: {
+                type: "object",
+                properties: {
+                    query: { type: "string", description: "The caller's question or topic they are asking about" }
+                },
+                required: ["query"]
+            }
+        },
+        {
+            type: "function",
             name: "end_call",
             description: "End the call politely. Call this AFTER saying goodbye to the caller. Use when: caller says bye/goodbye/thank you that's all/nothing else, OR when conversation is complete and caller has no more questions.",
             parameters: {

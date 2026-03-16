@@ -15,6 +15,7 @@ import {
     handleRouteCall, 
     handleGetPricingDetails, 
     handleGetInterfaceScreenshots,
+    handleGetFaqAnswer,
     handleEndCall 
 } from '../handlers/functions.js';
 import { 
@@ -238,6 +239,10 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
                         if (functionName === 'get_interface_screenshots') {
                             await handleGetInterfaceScreenshots(args, response, openAiWs);
+                        }
+
+                        if (functionName === 'get_faq_answer') {
+                            await handleGetFaqAnswer(args, response, openAiWs);
                         }
 
                         if (functionName === 'end_call') {

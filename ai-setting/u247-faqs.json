@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0",
+  "description": "FAQ database for Update247 phone agent",
+  "faqs": [
+    {
+      "id": "what_is_update247",
+      "question": "What is Update247?",
+      "keywords": ["what is", "update247", "what do you do", "about", "explain"],
+      "answer": "Update247 is a channel manager that helps hotels and vacation rentals manage bookings across multiple platforms like Booking.com, Airbnb, and Expedia from one dashboard. It syncs your availability, rates, and bookings automatically."
+    },
+    {
+      "id": "supported_channels",
+      "question": "Which booking channels do you support?",
+      "keywords": ["channels", "platforms", "booking.com", "airbnb", "expedia", "connect", "integration"],
+      "answer": "We support over 200 channels including Booking.com, Airbnb, Expedia, Agoda, VRBO, Hotels.com, and many more. We also connect with Google Hotel Ads and metasearch sites."
+    },
+    {
+      "id": "free_trial",
+      "question": "Do you offer a free trial?",
+      "keywords": ["free trial", "try free", "trial period", "test", "demo account"],
+      "answer": "Yes, we offer a 14-day free trial with full access to all features. No credit card required to start. You can connect up to 2 channels during the trial."
+    },
+    {
+      "id": "sync_time",
+      "question": "How fast does availability sync?",
+      "keywords": ["sync", "update time", "how fast", "real time", "instant"],
+      "answer": "Our system syncs instantly. When you get a booking on one channel, all other channels are updated within seconds to prevent double bookings."
+    },
+    {
+      "id": "contract",
+      "question": "Is there a contract or commitment?",
+      "keywords": ["contract", "commitment", "cancel", "monthly", "annual"],
+      "answer": "No long-term contract is required. You can pay monthly and cancel anytime. We also offer annual plans with a discount if you prefer."
+    },
+    {
+      "id": "setup_help",
+      "question": "Do you help with setup?",
+      "keywords": ["setup", "onboarding", "help connect", "configure", "implement"],
+      "answer": "Yes, our team provides free onboarding assistance. We help you connect your channels, import your existing rates, and train you on using the system."
+    },
+    {
+      "id": "support_hours",
+      "question": "What are your support hours?",
+      "keywords": ["support hours", "customer service", "help available", "contact support", "when available"],
+      "answer": "Our support team is available 24/7 via email and chat. Phone support is available Monday to Friday during business hours in your region."
+    },
+    {
+      "id": "change_rates",
+      "question": "How do I update my rates?",
+      "keywords": ["update rates", "change price", "modify rates", "rate grid", "pricing"],
+      "answer": "You can update rates in two ways: Use the rate grid for quick single changes by clicking on any date and typing the new rate. For bulk changes across date ranges, use the Bulk Update feature from the top menu."
+    },
+    {
+      "id": "mobile_app",
+      "question": "Is there a mobile app?",
+      "keywords": ["mobile", "app", "phone", "tablet", "ios", "android"],
+      "answer": "Yes, we have mobile apps for both iOS and Android. You can manage bookings, check availability, and receive instant notifications on your phone."
+    },
+    {
+      "id": "double_booking",
+      "question": "How do you prevent double bookings?",
+      "keywords": ["double booking", "overbooking", "prevent", "avoid"],
+      "answer": "Our instant sync technology updates all channels within seconds of a booking. This real-time synchronization prevents double bookings by closing availability across all platforms immediately."
+    },
+    {
+      "id": "payment_processing",
+      "question": "Do you handle payments?",
+      "keywords": ["payment", "credit card", "process payment", "collect money"],
+      "answer": "Update247 is a channel manager, not a payment processor. Payments are handled through each booking channel or your own payment gateway. However, we integrate with popular payment systems."
+    },
+    {
+      "id": "multiple_properties",
+      "question": "Can I manage multiple properties?",
+      "keywords": ["multiple properties", "several hotels", "many properties", "portfolio"],
+      "answer": "Yes, you can manage multiple properties from a single Update247 account. Each property can have its own settings, rates, and channel connections."
+    },
+    {
+      "id": "contact_website",
+      "question": "What is Update247 website address?",
+      "keywords": ["website", "web address", "url", "site", "online", "visit"],
+      "answer": "Our website is update247.com.au. You can visit us at update247.com.au to learn more about our services, see demos, and sign up."
+    },
+    {
+      "id": "contact_phone_email",
+      "question": "What is Update247 phone number and email?",
+      "keywords": ["phone", "phone number", "call", "contact", "email", "email address", "reach", "get in touch"],
+      "answer": "You can reach us by phone at 03 9014 9521, or by email at info@update247.com.au. We're happy to help with any questions."
+    }
+  ],
+  "fallback_response": "I don't have a specific answer for that question. Would you like me to have someone from our team call you back to discuss this in detail?"
+}

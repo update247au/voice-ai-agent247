@@ -209,3 +209,92 @@ export const handleEndCall = async (args, callState, callSid, response, openAiWs
     
     return callState;
 };
+
+// Handle get_faq_answer function call
+export const handleGetFaqAnswer = async (args, response, openAiWs) => {
+    const query = (args.query || '').toLowerCase();
+    console.log('[Function Call] get_faq_answer - Query:', query);
+    
+    try {
+        // Load FAQ data
+        const fs = await import('fs');
+        const path = await import('path');
+        const faqPath = path.join(process.cwd(), 'ai-setting', 'u247-faqs.json');
+        const faqData = JSON.parse(fs.readFileSync(faqPath, 'utf8'));
+        
+        // Search for matching FAQ
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        for (const faq of faqData.faqs) {
+            let score = 0;
+            
+            // Check keywords
+            for (const keyword of faq.keywords) {
+                if (query.includes(keyword.toLowerCase())) {
+                    score += 2;
+                }
+            }
+            
+            // Check question similarity
+            const questionWords = faq.question.toLowerCase().split(' ');
+            for (const word of questionWords) {
+                if (query.includes(word) && word.length > 3) {
+                    score += 1;
+                }
+            }
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = faq;
+            }
+        }
+        
+        let responseData;
+        if (bestMatch && bestScore >= 2) {
+            responseData = {
+                found: true,
+                faq_id: bestMatch.id,
+                question: bestMatch.question,
+                answer: bestMatch.answer,
+                INSTRUCTION: 'Use this answer to respond to the caller. Speak it naturally and conversationally, not word-for-word.'
+            };
+            console.log('[FAQ] Found match:', bestMatch.id, 'Score:', bestScore);
+        } else {
+            responseData = {
+                found: false,
+                answer: faqData.fallback_response,
+                INSTRUCTION: 'No specific FAQ matched. Use the fallback response or answer based on your general knowledge about Update247.'
+            };
+            console.log('[FAQ] No match found for query');
+        }
+        
+        const functionOutput = {
+            type: 'conversation.item.create',
+            item: {
+                type: 'function_call_output',
+                call_id: response.call_id,
+                output: JSON.stringify(responseData)
+            }
+        };
+        openAiWs.send(JSON.stringify(functionOutput));
+        openAiWs.send(JSON.stringify({ type: 'response.create' }));
+    } catch (error) {
+        console.error('[FAQ] Failed to fetch FAQ:', error.message);
+        
+        const errorOutput = {
+            type: 'conversation.item.create',
+            item: {
+                type: 'function_call_output',
+                call_id: response.call_id,
+                output: JSON.stringify({ 
+                    found: false, 
+                    error: 'Unable to retrieve FAQ. Please answer based on your knowledge or offer to escalate.',
+                    details: error.message 
+                })
+            }
+        };
+        openAiWs.send(JSON.stringify(errorOutput));
+        openAiWs.send(JSON.stringify({ type: 'response.create' }));
+    }
+};

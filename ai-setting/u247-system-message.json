@@ -64,6 +64,10 @@
         "description": "Fetch current Update247 pricing and plans. Use when caller asks about pricing, cost, or plans. Ask caller if their property is a Hotel or Vacation Rental first."
       },
       {
+        "name": "get_faq_answer",
+        "description": "Search the FAQ database for answers to common questions. Use when caller asks general questions about Update247 features, setup, support hours, channels supported, free trial, mobile app, etc."
+      },
+      {
         "name": "end_call",
         "description": "End the call politely. Call this AFTER saying goodbye. Use when: caller says bye/goodbye/thank you that's all/nothing else, OR conversation is complete."
       }
