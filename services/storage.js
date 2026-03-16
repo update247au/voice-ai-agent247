@@ -246,4 +246,39 @@ export const uploadRecordingToStorage = async (filename, buffer, contentType = '
     }
 };
 
+// Upload transcription to GCS
+export const uploadTranscriptionToStorage = async (filename, transcriptionData) => {
+    if (!storage || !GCS_BUCKET) {
+        console.log('[Transcription Upload] GCS not configured, cannot upload transcription');
+        return { success: false, error: 'GCS not configured' };
+    }
+
+    try {
+        // Save formatted text version
+        const textPath = `transcriptions/${filename}.txt`;
+        const textFile = storage.bucket(GCS_BUCKET).file(textPath);
+        await textFile.save(transcriptionData.formatted || transcriptionData.text || '', {
+            contentType: 'text/plain'
+        });
+        console.log(`[Transcription Upload] ✓ Text uploaded to gs://${GCS_BUCKET}/${textPath}`);
+
+        // Save full JSON with all metadata (words, timestamps, confidence, etc.)
+        const jsonPath = `transcriptions/${filename}.json`;
+        const jsonFile = storage.bucket(GCS_BUCKET).file(jsonPath);
+        await jsonFile.save(JSON.stringify(transcriptionData, null, 2), {
+            contentType: 'application/json'
+        });
+        console.log(`[Transcription Upload] ✓ JSON uploaded to gs://${GCS_BUCKET}/${jsonPath}`);
+
+        return { 
+            success: true, 
+            textLocation: `gs://${GCS_BUCKET}/${textPath}`,
+            jsonLocation: `gs://${GCS_BUCKET}/${jsonPath}`
+        };
+    } catch (err) {
+        console.error(`[Transcription Upload] ✗ Failed to upload transcription: ${err.message}`);
+        return { success: false, error: err.message };
+    }
+};
+
 export { storage, GCS_BUCKET };

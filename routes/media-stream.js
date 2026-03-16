@@ -6,7 +6,7 @@ import { getTwilioClient, startRecording, downloadRecording } from '../services/
 import { lookupPropertyByPhone } from '../services/phoneLookup.js';
 import { transcribeAudio } from '../services/transcription.js';
 import { transcribeAudio as transcribeWithAssemblyAI } from '../services/assemblyai.js';
-import { saveTranscriptToStorage, saveBackupTranscript, uploadRecordingToStorage } from '../services/storage.js';
+import { saveTranscriptToStorage, saveBackupTranscript, uploadRecordingToStorage, uploadTranscriptionToStorage } from '../services/storage.js';
 import { sendCallTranscriptEmail, sendCallTranscriptWithRecording } from '../services/email.js';
 import { createInactivityHandler } from '../handlers/inactivity.js';
 import { createSessionUpdate, createInitialGreeting, getOpenAIWebSocketUrl, getOpenAIWebSocketHeaders } from '../handlers/openaiSession.js';
@@ -719,6 +719,13 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         
                         if (transcriptionResult.success) {
                             console.log(`[Recording Background] ✓ Transcription completed (${transcriptionResult.text?.length || 0} chars)`);
+                            
+                            // Upload transcription to GCS
+                            const transcriptionFilename = `transcription-${transcript.callerNumber || 'unknown'}-${new Date().toISOString().split('T')[0]}-${recSid}`;
+                            const transcriptionUpload = await uploadTranscriptionToStorage(transcriptionFilename, transcriptionResult);
+                            if (transcriptionUpload.success) {
+                                console.log(`[Recording Background] ✓ Transcription saved to GCS`);
+                            }
                         } else {
                             console.log(`[Recording Background] Transcription skipped/failed: ${transcriptionResult.error || 'Unknown reason'}`);
                         }
