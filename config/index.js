@@ -18,6 +18,14 @@ export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || null;
 export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || null;
 export const PORT = Number(process.env.PORT) || 8080;
 
+// Phone lookup API configuration
+export const PHONE_LOOKUP_CONFIG = {
+    API_URL: process.env.PHONE_LOOKUP_API_URL || null,  // e.g., https://api.update247.com/lookup-phone
+    API_KEY: process.env.PHONE_LOOKUP_API_KEY || null,  // Optional API key for auth
+    TIMEOUT_MS: Number(process.env.PHONE_LOOKUP_TIMEOUT_MS) || 5000,  // 5 second timeout
+    FALLBACK_TO_FILE: process.env.PHONE_LOOKUP_FALLBACK !== 'false'  // Fallback to phone-mappings.json if API fails
+};
+
 // Email configuration (for future use)
 export const EMAIL_CONFIG = {
     // SMTP Configuration (cPanel)

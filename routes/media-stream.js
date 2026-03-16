@@ -463,8 +463,10 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                         // Caller found - likely existing client
                                         callState.property_id = propertyData.property_id;
                                         callState.property_name = propertyData.property_name;
+                                        callState.contact_name = propertyData.contact_name || null;
+                                        callState.contact_email = propertyData.contact_email || null;
                                         callState.phone_lookup_found = true;
-                                        callState.phone_lookup_source = 'phone-mappings.json';
+                                        callState.phone_lookup_source = propertyData.source || 'unknown';
                                         
                                         // New fields for caller status
                                         callState.is_likely_existing_client = propertyData.is_existing_client;
@@ -476,16 +478,21 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                         let contextMessage = '';
                                         if (propertyData.has_multiple_properties) {
                                             const propertyList = propertyData.properties
-                                                .map(p => `"${p.property_name}" (ID: ${p.property_id})`)
+                                                .map(p => {
+                                                    let info = `"${p.property_name}" (ID: ${p.property_id})`;
+                                                    if (p.contact_name) info += ` - Contact: ${p.contact_name}`;
+                                                    return info;
+                                                })
                                                 .join(', ');
                                             contextMessage = `[BACKGROUND INFO - DO NOT READ ALOUD: Phone lookup completed. This caller is LIKELY AN EXISTING CLIENT with ${propertyData.property_count} properties: ${propertyList}. They may be calling about any of these properties. Ask which property they are calling about if relevant. Route to SUPPORT unless they indicate otherwise.]`;
                                             console.log(`[Phone Lookup] ★ EXISTING CLIENT with ${propertyData.property_count} PROPERTIES:`);
                                             propertyData.properties.forEach((p, i) => {
-                                                console.log(`   ${i + 1}. ${p.property_name} (ID: ${p.property_id})`);
+                                                console.log(`   ${i + 1}. ${p.property_name} (ID: ${p.property_id})${p.contact_name ? ` - Contact: ${p.contact_name}` : ''}`);
                                             });
                                         } else {
-                                            contextMessage = `[BACKGROUND INFO - DO NOT READ ALOUD: Phone lookup completed. This caller is LIKELY AN EXISTING CLIENT associated with property "${callState.property_name}" (ID: ${callState.property_id}). This caller is probably calling for SUPPORT. Confirm if this is the property they're calling about.]`;
-                                            console.log(`[Phone Lookup] ★ LIKELY EXISTING CLIENT: ${callState.property_name} (ID: ${callState.property_id})`);
+                                            const contactInfo = propertyData.contact_name ? ` Contact name: ${propertyData.contact_name}.` : '';
+                                            contextMessage = `[BACKGROUND INFO - DO NOT READ ALOUD: Phone lookup completed. This caller is LIKELY AN EXISTING CLIENT associated with property "${callState.property_name}" (ID: ${callState.property_id}).${contactInfo} This caller is probably calling for SUPPORT. Confirm if this is the property they're calling about.]`;
+                                            console.log(`[Phone Lookup] ★ LIKELY EXISTING CLIENT: ${callState.property_name} (ID: ${callState.property_id})${propertyData.contact_name ? ` - Contact: ${propertyData.contact_name}` : ''}`);
                                         }
                                         
                                         // Inject context into conversation (AI will see this as background info)
