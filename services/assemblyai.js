@@ -85,9 +85,9 @@ const startTranscription = async (audioUrl, options = {}) => {
     try {
         const requestBody = {
             audio_url: audioUrl,
-            speech_model: 'universal-2',  // Required by AssemblyAI API
-            speaker_labels: options.speaker_labels ?? true,
-            language_code: options.language_code || 'en_au'
+            language_detection: true,  // Auto-detect language
+            speech_models: ['universal-3-pro', 'universal-2'],  // Required by AssemblyAI API
+            speaker_labels: options.speaker_labels ?? true
         };
 
         const response = await fetch(`${ASSEMBLYAI_API_BASE}/transcript`, {
