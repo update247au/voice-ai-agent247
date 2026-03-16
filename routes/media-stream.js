@@ -490,14 +490,14 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                                     return info;
                                                 })
                                                 .join(', ');
-                                            contextMessage = `[BACKGROUND INFO - DO NOT READ ALOUD: Phone lookup completed. This caller is LIKELY AN EXISTING CLIENT with ${propertyData.property_count} properties: ${propertyList}. They may be calling about any of these properties. Ask which property they are calling about if relevant. Route to SUPPORT unless they indicate otherwise.]`;
+                                            contextMessage = `[BACKGROUND INFO - DO NOT READ ALOUD: Phone lookup completed. This caller is LIKELY AN EXISTING CLIENT with ${propertyData.property_count} properties: ${propertyList}. IMPORTANT: First listen to their issue, then ask which property they are calling about. DO NOT ask for property ID - you already have the IDs. Route to SUPPORT unless they indicate otherwise.]`;
                                             console.log(`[Phone Lookup] ★ EXISTING CLIENT with ${propertyData.property_count} PROPERTIES:`);
                                             propertyData.properties.forEach((p, i) => {
                                                 console.log(`   ${i + 1}. ${p.property_name} (ID: ${p.property_id})${p.contact_name ? ` - Contact: ${p.contact_name}` : ''}`);
                                             });
                                         } else {
                                             const contactInfo = propertyData.contact_name ? ` Contact name: ${propertyData.contact_name}.` : '';
-                                            contextMessage = `[BACKGROUND INFO - DO NOT READ ALOUD: Phone lookup completed. This caller is LIKELY AN EXISTING CLIENT associated with property "${callState.property_name}" (ID: ${callState.property_id}).${contactInfo} This caller is probably calling for SUPPORT. Confirm if this is the property they're calling about.]`;
+                                            contextMessage = `[BACKGROUND INFO - DO NOT READ ALOUD: Phone lookup completed. This caller is LIKELY AN EXISTING CLIENT associated with property "${callState.property_name}" (ID: ${callState.property_id}).${contactInfo} IMPORTANT: DO NOT ask for property ID - you already have it. First listen to their issue. This caller is probably calling for SUPPORT.]`;
                                             console.log(`[Phone Lookup] ★ LIKELY EXISTING CLIENT: ${callState.property_name} (ID: ${callState.property_id})${propertyData.contact_name ? ` - Contact: ${propertyData.contact_name}` : ''}`);
                                         }
                                         
