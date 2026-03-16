@@ -51,6 +51,8 @@ export const EMAIL_CONFIG = {
     
     // Common
     NOTIFY_EMAIL: process.env.NOTIFY_EMAIL || null,
+    TEST_EMAIL: process.env.TEST_EMAIL || null,
+    TEST_CALLER_NUMBER: process.env.TEST_CALLER_NUMBER || '+61423489798',
     EMAIL_ENABLED: process.env.EMAIL_ENABLED === 'true'
 };
 

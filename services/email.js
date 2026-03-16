@@ -50,16 +50,29 @@ export const initializeEmail = () => {
 // Get email transporter
 export const getEmailTransporter = () => transporter;
 
+// Determine target email based on caller number
+export const getTargetEmail = (callerNumber) => {
+    const normalizedCaller = (callerNumber || '').replace(/[^0-9+]/g, '');
+    const testNumber = (EMAIL_CONFIG.TEST_CALLER_NUMBER || '').replace(/[^0-9+]/g, '');
+    
+    if (testNumber && normalizedCaller.includes(testNumber.replace('+', '')) && EMAIL_CONFIG.TEST_EMAIL) {
+        console.log(`[Email] Routing to TEST_EMAIL for caller: ${callerNumber}`);
+        return EMAIL_CONFIG.TEST_EMAIL;
+    }
+    return EMAIL_CONFIG.NOTIFY_EMAIL;
+};
+
 // Send call transcript email
-export const sendCallTranscriptEmail = async (transcript, filename) => {
+export const sendCallTranscriptEmail = async (transcript, filename, overrideEmail = null) => {
     if (!transporter) {
         console.log('[Email] Cannot send email: No transporter configured');
         return { success: false, error: 'Email not configured' };
     }
 
-    if (!EMAIL_CONFIG.NOTIFY_EMAIL) {
-        console.log('[Email] Cannot send email: NOTIFY_EMAIL not set');
-        return { success: false, error: 'NOTIFY_EMAIL not configured' };
+    const targetEmail = overrideEmail || getTargetEmail(transcript.callerNumber);
+    if (!targetEmail) {
+        console.log('[Email] Cannot send email: No target email configured');
+        return { success: false, error: 'No target email configured' };
     }
 
     try {
@@ -111,7 +124,7 @@ Full transcript attached as JSON file.
 
         const mailOptions = {
             from: fromEmail,
-            to: EMAIL_CONFIG.NOTIFY_EMAIL,
+            to: targetEmail,
             subject: `Call Transcript - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
             text: emailBody,
             attachments: [
@@ -124,7 +137,7 @@ Full transcript attached as JSON file.
         };
 
         const result = await transporter.sendMail(mailOptions);
-        console.log(`[Email] ✓ Call transcript sent to ${EMAIL_CONFIG.NOTIFY_EMAIL}`);
+        console.log(`[Email] ✓ Call transcript sent to ${targetEmail}`);
         return { success: true, messageId: result.messageId };
     } catch (error) {
         console.error('[Email] ✗ Failed to send email:', error.message);
@@ -133,15 +146,16 @@ Full transcript attached as JSON file.
 };
 
 // Send call transcript email WITH audio recording and transcription attached
-export const sendCallTranscriptWithRecording = async (transcript, filename, recording, transcription = null) => {
+export const sendCallTranscriptWithRecording = async (transcript, filename, recording, transcription = null, overrideEmail = null) => {
     if (!transporter) {
         console.log('[Email] Cannot send email: No transporter configured');
         return { success: false, error: 'Email not configured' };
     }
 
-    if (!EMAIL_CONFIG.NOTIFY_EMAIL) {
-        console.log('[Email] Cannot send email: NOTIFY_EMAIL not set');
-        return { success: false, error: 'NOTIFY_EMAIL not configured' };
+    const targetEmail = overrideEmail || getTargetEmail(transcript.callerNumber);
+    if (!targetEmail) {
+        console.log('[Email] Cannot send email: No target email configured');
+        return { success: false, error: 'No target email configured' };
     }
 
     try {
@@ -231,14 +245,14 @@ Full transcript JSON and call recording attached.
 
         const mailOptions = {
             from: fromEmail,
-            to: EMAIL_CONFIG.NOTIFY_EMAIL,
+            to: targetEmail,
             subject: `Call Transcript + Recording - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
             text: emailBody,
             attachments: attachments
         };
 
         const result = await transporter.sendMail(mailOptions);
-        console.log(`[Email] ✓ Call transcript WITH recording${transcription?.success ? ' + transcription' : ''} sent to ${EMAIL_CONFIG.NOTIFY_EMAIL}`);
+        console.log(`[Email] ✓ Call transcript WITH recording${transcription?.success ? ' + transcription' : ''} sent to ${targetEmail}`);
         return { success: true, messageId: result.messageId };
     } catch (error) {
         console.error('[Email] ✗ Failed to send email with recording:', error.message);
