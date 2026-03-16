@@ -85,6 +85,12 @@
       "question": "What is Update247 phone number and email?",
       "keywords": ["phone", "phone number", "call", "contact", "email", "email address", "reach", "get in touch"],
       "answer": "You can reach us by phone at 03 9014 9521, or by email at info@update247.com.au. We're happy to help with any questions."
+    },
+    {
+      "id": "rate_not_showing_correctly_ota",
+      "question": "Why is my rate not showing correctly on Booking.com or Expedia?",
+      "keywords": ["rate not showing", "wrong rate", "incorrect rate", "price wrong", "booking.com rate", "expedia rate", "ota rate", "rate mismatch", "rate discrepancy", "third party", "rate issue"],
+      "answer": "There are a few possible reasons for rate discrepancies on OTA websites like Booking.com or Expedia. First, please check the rate in Update247 and compare it with the rate shown in the extranet of the OTA website. If the rates match in both Update247 and the OTA extranet, then Update247 is sending the rate correctly. How the OTA displays the rate on their frontend or guest-facing website is controlled by the OTA, not by Update247. They may add fees, taxes, apply promotions, or display the rate in a different currency such as USD instead of AUD. If there's a discrepancy between what's shown to guests and what's in the extranet, you'll need to contact the OTA's support team directly to resolve it."
     }
   ],
   "fallback_response": "I don't have a specific answer for that question. Would you like me to have someone from our team call you back to discuss this in detail?"
