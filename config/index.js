@@ -26,6 +26,14 @@ export const PHONE_LOOKUP_CONFIG = {
     FALLBACK_TO_FILE: process.env.PHONE_LOOKUP_FALLBACK !== 'false'  // Fallback to phone-mappings.json if API fails
 };
 
+// AssemblyAI configuration (for call recording transcription)
+export const ASSEMBLYAI_CONFIG = {
+    API_KEY: process.env.ASSEMBLYAI_API_KEY || null,
+    ENABLED: process.env.ASSEMBLYAI_ENABLED === 'true',
+    SPEAKER_LABELS: process.env.ASSEMBLYAI_SPEAKER_LABELS !== 'false',  // Enable speaker diarization by default
+    LANGUAGE_CODE: process.env.ASSEMBLYAI_LANGUAGE || 'en_au'  // Australian English
+};
+
 // Email configuration (for future use)
 export const EMAIL_CONFIG = {
     // SMTP Configuration (cPanel)

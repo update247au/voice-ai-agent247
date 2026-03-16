@@ -5,6 +5,7 @@ import { OPENAI_API_KEY, LOG_EVENT_TYPES, SHOW_TIMING_MATH, USE_REALTIME_TRANSCR
 import { getTwilioClient, startRecording, downloadRecording } from '../services/twilio.js';
 import { lookupPropertyByPhone } from '../services/phoneLookup.js';
 import { transcribeAudio } from '../services/transcription.js';
+import { transcribeAudio as transcribeWithAssemblyAI } from '../services/assemblyai.js';
 import { saveTranscriptToStorage, saveBackupTranscript, uploadRecordingToStorage } from '../services/storage.js';
 import { sendCallTranscriptEmail, sendCallTranscriptWithRecording } from '../services/email.js';
 import { createInactivityHandler } from '../handlers/inactivity.js';
@@ -680,7 +681,7 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                 }
             };
 
-            // Background recording processor - downloads, uploads to GCS, and sends email with attachment
+            // Background recording processor - downloads, uploads to GCS, transcribes with AssemblyAI, and sends email
             const processRecordingInBackground = async (recSid, transcript, transcriptFilename) => {
                 console.log(`[Recording Background] Starting background processing for ${recSid}`);
                 
@@ -710,14 +711,29 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         console.log(`[Recording Background] ✓ Recording uploaded to ${uploadResult.location}`);
                     }
 
-                    // Send follow-up email with recording attached
+                    // Transcribe with AssemblyAI (if enabled)
+                    let transcriptionResult = null;
+                    try {
+                        console.log(`[Recording Background] Starting AssemblyAI transcription...`);
+                        transcriptionResult = await transcribeWithAssemblyAI(downloadResult.buffer);
+                        
+                        if (transcriptionResult.success) {
+                            console.log(`[Recording Background] ✓ Transcription completed (${transcriptionResult.text?.length || 0} chars)`);
+                        } else {
+                            console.log(`[Recording Background] Transcription skipped/failed: ${transcriptionResult.error || 'Unknown reason'}`);
+                        }
+                    } catch (transcribeErr) {
+                        console.error(`[Recording Background] Transcription error: ${transcribeErr.message}`);
+                    }
+
+                    // Send follow-up email with recording and transcription attached
                     await sendCallTranscriptWithRecording(transcript, transcriptFilename, {
                         buffer: downloadResult.buffer,
                         filename: recordingFilename,
                         contentType: downloadResult.contentType
-                    });
+                    }, transcriptionResult);
 
-                    console.log(`[Recording Background] ✓ Complete - recording processed and emailed`);
+                    console.log(`[Recording Background] ✓ Complete - recording${transcriptionResult?.success ? ' + transcription' : ''} processed and emailed`);
 
                 } catch (err) {
                     console.error(`[Recording Background] Error processing recording: ${err.message}`);

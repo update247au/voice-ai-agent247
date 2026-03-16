@@ -132,8 +132,8 @@ Full transcript attached as JSON file.
     }
 };
 
-// Send call transcript email WITH audio recording attached
-export const sendCallTranscriptWithRecording = async (transcript, filename, recording) => {
+// Send call transcript email WITH audio recording and transcription attached
+export const sendCallTranscriptWithRecording = async (transcript, filename, recording, transcription = null) => {
     if (!transporter) {
         console.log('[Email] Cannot send email: No transporter configured');
         return { success: false, error: 'Email not configured' };
@@ -153,6 +153,19 @@ export const sendCallTranscriptWithRecording = async (transcript, filename, reco
         const disconnectInfo = transcript.disconnectInfo || {};
         const tokenUsage = transcript.tokenUsage || {};
         
+        // Build transcription section if available
+        let transcriptionSection = '';
+        if (transcription && transcription.success && transcription.formatted) {
+            transcriptionSection = `
+
+=============================
+CALL TRANSCRIPTION (AssemblyAI)
+=============================
+${transcription.formatted}
+
+`;
+        }
+
         const emailBody = `
 Call Transcript Summary
 ========================
@@ -168,7 +181,7 @@ Call Details:
 Caller Information:
 - Property ID: ${callState.property_id || 'Not provided'}
 - Property Name: ${callState.property_name || 'Not provided'}
-- Caller Name: ${callState.caller_name || 'Not provided'}
+- Contact Name: ${callState.contact_name || 'Not provided'}
 - Caller Email: ${callState.caller_email || 'Not provided'}
 - Existing Client: ${callState.is_existing_client !== null ? (callState.is_existing_client ? 'Yes' : 'No') : 'Not determined'}
 - Routed To: ${callState.routing ? callState.routing.toUpperCase() : 'Not routed'}
@@ -184,9 +197,9 @@ Token Usage:
 
 Issue Description:
 ${callState.issue_description || 'No issue recorded'}
-
+${transcriptionSection}
 ---
-Full transcript and call recording attached.
+Full transcript JSON and call recording attached.
         `.trim();
 
         const attachments = [
@@ -206,6 +219,16 @@ Full transcript and call recording attached.
             });
         }
 
+        // Add transcription as text file if available
+        if (transcription && transcription.success && transcription.formatted) {
+            const transcriptionFilename = `transcription-${transcript.callerNumber || 'unknown'}-${new Date().toISOString().split('T')[0]}.txt`;
+            attachments.push({
+                filename: transcriptionFilename,
+                content: transcription.formatted,
+                contentType: 'text/plain'
+            });
+        }
+
         const mailOptions = {
             from: fromEmail,
             to: EMAIL_CONFIG.NOTIFY_EMAIL,
@@ -215,7 +238,7 @@ Full transcript and call recording attached.
         };
 
         const result = await transporter.sendMail(mailOptions);
-        console.log(`[Email] ✓ Call transcript WITH recording sent to ${EMAIL_CONFIG.NOTIFY_EMAIL}`);
+        console.log(`[Email] ✓ Call transcript WITH recording${transcription?.success ? ' + transcription' : ''} sent to ${EMAIL_CONFIG.NOTIFY_EMAIL}`);
         return { success: true, messageId: result.messageId };
     } catch (error) {
         console.error('[Email] ✗ Failed to send email with recording:', error.message);
