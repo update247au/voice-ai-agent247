@@ -90,6 +90,20 @@ export const getOpenAITools = () => {
                 },
                 required: ["reason"]
             }
+        },
+        {
+            type: "function",
+            name: "get_website_troubleshooting",
+            description: "Use this tool when caller reports their website is not working, website is down, or has website issues. This tool guides you through collecting diagnostic information. Call this multiple times - once to get the first question, then again with each answer until all info is collected.",
+            parameters: {
+                type: "object",
+                properties: {
+                    website_address: { type: "string", description: "The website address or domain name (e.g., myhotel.com.au)" },
+                    first_noticed: { type: "string", description: "When the caller first noticed the website was not working" },
+                    error_message: { type: "string", description: "What error message or what the caller sees when visiting the website" },
+                    other_websites_working: { type: "string", description: "Whether other websites are working fine for the caller (yes/no/not sure)" }
+                }
+            }
         }
     ];
 };

@@ -298,3 +298,83 @@ export const handleGetFaqAnswer = async (args, response, openAiWs) => {
         openAiWs.send(JSON.stringify({ type: 'response.create' }));
     }
 };
+
+// Handle get_website_troubleshooting function call
+export const handleGetWebsiteTroubleshooting = async (args, response, openAiWs) => {
+    console.log('[Function Call] get_website_troubleshooting - Args:', args);
+    
+    // Check if we have all required information
+    const collectedInfo = {
+        website_address: args.website_address || null,
+        first_noticed: args.first_noticed || null,
+        error_message: args.error_message || null,
+        other_websites_working: args.other_websites_working || null
+    };
+    
+    // Determine which questions still need to be asked
+    const questionsToAsk = [];
+    
+    if (!collectedInfo.website_address) {
+        questionsToAsk.push({
+            field: "website_address",
+            question: "What is your website address or domain name?"
+        });
+    }
+    
+    if (!collectedInfo.first_noticed) {
+        questionsToAsk.push({
+            field: "first_noticed",
+            question: "When did you first notice that the website was not working?"
+        });
+    }
+    
+    if (!collectedInfo.error_message) {
+        questionsToAsk.push({
+            field: "error_message",
+            question: "When you visit the website, what message or error do you see?"
+        });
+    }
+    
+    if (!collectedInfo.other_websites_working) {
+        questionsToAsk.push({
+            field: "other_websites_working",
+            question: "Are other websites working fine for you, or is it just this one?"
+        });
+    }
+    
+    let responseData;
+    
+    if (questionsToAsk.length > 0) {
+        // Still collecting information - provide next question
+        responseData = {
+            status: "collecting_info",
+            collected_so_far: collectedInfo,
+            next_question: questionsToAsk[0].question,
+            next_field: questionsToAsk[0].field,
+            remaining_questions: questionsToAsk.length,
+            all_questions: questionsToAsk,
+            INSTRUCTION: `Ask the caller: "${questionsToAsk[0].question}" Then call this function again with the answer to collect more details. Ask ONE question at a time.`
+        };
+        console.log('[Website Troubleshooting] Need to collect:', questionsToAsk[0].field);
+    } else {
+        // All information collected - escalate to tech team
+        responseData = {
+            status: "escalated",
+            collected_info: collectedInfo,
+            escalation_message: "I have all the details I need. The issue has been escalated to our technical team. They will check the website and work on fixing it. Is there anything else I can help you with today?",
+            INSTRUCTION: "Tell the caller: 'Thank you for providing those details. I have escalated this issue to our technical team. They will check your website and work on fixing it. Is there anything else I can help you with today?'"
+        };
+        console.log('[Website Troubleshooting] All info collected, escalating:', collectedInfo);
+    }
+    
+    const functionOutput = {
+        type: 'conversation.item.create',
+        item: {
+            type: 'function_call_output',
+            call_id: response.call_id,
+            output: JSON.stringify(responseData)
+        }
+    };
+    openAiWs.send(JSON.stringify(functionOutput));
+    openAiWs.send(JSON.stringify({ type: 'response.create' }));
+};

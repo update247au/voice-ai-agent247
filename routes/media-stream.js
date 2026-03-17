@@ -16,7 +16,8 @@ import {
     handleGetPricingDetails, 
     handleGetInterfaceScreenshots,
     handleGetFaqAnswer,
-    handleEndCall 
+    handleEndCall,
+    handleGetWebsiteTroubleshooting 
 } from '../handlers/functions.js';
 import { 
     createInitialCallState, 
@@ -247,6 +248,10 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
                         if (functionName === 'end_call') {
                             callState = await handleEndCall(args, callState, callSid, response, openAiWs, connection);
+                        }
+
+                        if (functionName === 'get_website_troubleshooting') {
+                            await handleGetWebsiteTroubleshooting(args, response, openAiWs);
                         }
                     }
 
