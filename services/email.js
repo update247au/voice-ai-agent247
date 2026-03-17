@@ -249,8 +249,8 @@ Full transcript JSON and call recording attached.
             from: fromEmail,
             to: targetEmail,
             subject: callState.property_name 
-                ? `${callState.property_name} : ${transcript.callerNumber || 'Unknown Caller'} : ${new Date().toLocaleDateString()}`
-                : `Call Transcript + Recording - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
+                ? `${callState.property_name} Recording : ${transcript.callerNumber || 'Unknown Caller'} : ${new Date().toLocaleDateString()}`
+                : `Call Recording - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
             text: emailBody,
             attachments: attachments
         };
