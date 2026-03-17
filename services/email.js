@@ -50,15 +50,30 @@ export const initializeEmail = () => {
 // Get email transporter
 export const getEmailTransporter = () => transporter;
 
-// Determine target email based on caller number
-export const getTargetEmail = (callerNumber) => {
+// Determine target email based on caller number and email type
+// emailType: 'transcript' | 'recording' | 'default'
+export const getTargetEmail = (callerNumber, emailType = 'default') => {
     const normalizedCaller = (callerNumber || '').replace(/[^0-9+]/g, '');
     const testNumber = (EMAIL_CONFIG.TEST_CALLER_NUMBER || '').replace(/[^0-9+]/g, '');
     
+    // Check if this is a test caller
     if (testNumber && normalizedCaller.includes(testNumber.replace('+', '')) && EMAIL_CONFIG.TEST_EMAIL) {
         console.log(`[Email] Routing to TEST_EMAIL for caller: ${callerNumber}`);
         return EMAIL_CONFIG.TEST_EMAIL;
     }
+    
+    // Route based on email type
+    if (emailType === 'transcript' && EMAIL_CONFIG.TRANSCRIPT_EMAIL) {
+        console.log(`[Email] Using TRANSCRIPT_EMAIL for transcript`);
+        return EMAIL_CONFIG.TRANSCRIPT_EMAIL;
+    }
+    
+    if (emailType === 'recording' && EMAIL_CONFIG.RECORDING_EMAIL) {
+        console.log(`[Email] Using RECORDING_EMAIL for recording`);
+        return EMAIL_CONFIG.RECORDING_EMAIL;
+    }
+    
+    // Fallback to NOTIFY_EMAIL
     return EMAIL_CONFIG.NOTIFY_EMAIL;
 };
 
@@ -69,7 +84,7 @@ export const sendCallTranscriptEmail = async (transcript, filename, overrideEmai
         return { success: false, error: 'Email not configured' };
     }
 
-    const targetEmail = overrideEmail || getTargetEmail(transcript.callerNumber);
+    const targetEmail = overrideEmail || getTargetEmail(transcript.callerNumber, 'transcript');
     if (!targetEmail) {
         console.log('[Email] Cannot send email: No target email configured');
         return { success: false, error: 'No target email configured' };
@@ -154,7 +169,7 @@ export const sendCallTranscriptWithRecording = async (transcript, filename, reco
         return { success: false, error: 'Email not configured' };
     }
 
-    const targetEmail = overrideEmail || getTargetEmail(transcript.callerNumber);
+    const targetEmail = overrideEmail || getTargetEmail(transcript.callerNumber, 'recording');
     if (!targetEmail) {
         console.log('[Email] Cannot send email: No target email configured');
         return { success: false, error: 'No target email configured' };

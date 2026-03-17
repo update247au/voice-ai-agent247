@@ -49,8 +49,10 @@ export const EMAIL_CONFIG = {
     AWS_SES_REGION: process.env.AWS_SES_REGION || 'us-east-1',
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || null,
     
-    // Common
-    NOTIFY_EMAIL: process.env.NOTIFY_EMAIL || null,
+    // Email Recipients
+    NOTIFY_EMAIL: process.env.NOTIFY_EMAIL || null,                    // Default email (fallback)
+    TRANSCRIPT_EMAIL: process.env.TRANSCRIPT_EMAIL || null,            // Email for transcript only
+    RECORDING_EMAIL: process.env.RECORDING_EMAIL || null,              // Email for recording + transcript
     TEST_EMAIL: process.env.TEST_EMAIL || null,
     TEST_CALLER_NUMBER: process.env.TEST_CALLER_NUMBER || '+61423489798',
     EMAIL_ENABLED: process.env.EMAIL_ENABLED === 'true'
