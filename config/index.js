@@ -34,6 +34,16 @@ export const ASSEMBLYAI_CONFIG = {
     LANGUAGE_CODE: process.env.ASSEMBLYAI_LANGUAGE || 'en_au'  // Australian English
 };
 
+// Call Log API configuration (sends call data to external server)
+export const CALL_LOG_API_CONFIG = {
+    API_URL: process.env.CALL_LOG_API_URL || null,           // API endpoint URL
+    API_KEY: process.env.CALL_LOG_API_KEY || null,           // Optional API key for auth
+    TIMEOUT_MS: Number(process.env.CALL_LOG_TIMEOUT_MS) || 10000,  // 10 second timeout
+    ENABLED: process.env.CALL_LOG_API_ENABLED === 'true',    // Enable/disable
+    LOGGED_ADMIN: process.env.CALL_LOG_ADMIN || 'AI Agent',  // logged_admin field value
+    ANSWER_BY: process.env.CALL_LOG_ANSWER_BY || 'AI Agent'  // answer_by field value
+};
+
 // Email configuration (for future use)
 export const EMAIL_CONFIG = {
     // SMTP Configuration (cPanel)

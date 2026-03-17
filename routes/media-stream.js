@@ -8,6 +8,7 @@ import { transcribeAudio } from '../services/transcription.js';
 import { transcribeAudio as transcribeWithAssemblyAI } from '../services/assemblyai.js';
 import { saveTranscriptToStorage, saveBackupTranscript, uploadRecordingToStorage, uploadTranscriptionToStorage } from '../services/storage.js';
 import { sendCallTranscriptEmail, sendCallTranscriptWithRecording } from '../services/email.js';
+import { sendCallLog } from '../services/callLog.js';
 import { createInactivityHandler } from '../handlers/inactivity.js';
 import { createSessionUpdate, createInitialGreeting, getOpenAIWebSocketUrl, getOpenAIWebSocketHeaders } from '../handlers/openaiSession.js';
 import { 
@@ -686,13 +687,24 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                 await sendCallTranscriptEmail(transcript, filename);
 
                 // Process recording in background (don't block call teardown)
+                // Call log will be sent after transcription is complete (with full transcription text)
                 if (recordingSid) {
-                    processRecordingInBackground(recordingSid, transcript, filename);
+                    processRecordingInBackground(recordingSid, transcript, filename, callerNumber, callState);
+                } else {
+                    // No recording - send call log without transcription
+                    await sendCallLog({
+                        callerNumber: callerNumber,
+                        callState: callState,
+                        transcript: transcript,
+                        transcriptionText: null,
+                        transcriptionUrl: null,
+                        recordingUrl: null
+                    });
                 }
             };
 
             // Background recording processor - downloads, uploads to GCS, transcribes with AssemblyAI, and sends email
-            const processRecordingInBackground = async (recSid, transcript, transcriptFilename) => {
+            const processRecordingInBackground = async (recSid, transcript, transcriptFilename, callerNumber, callState) => {
                 console.log(`[Recording Background] Starting background processing for ${recSid}`);
                 
                 try {
@@ -717,12 +729,15 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         downloadResult.contentType
                     );
 
+                    let recordingUrl = null;
                     if (uploadResult.success) {
+                        recordingUrl = uploadResult.location;
                         console.log(`[Recording Background] ✓ Recording uploaded to ${uploadResult.location}`);
                     }
 
                     // Transcribe with AssemblyAI (if enabled)
                     let transcriptionResult = null;
+                    let transcriptionUrl = null;
                     try {
                         console.log(`[Recording Background] Starting AssemblyAI transcription...`);
                         transcriptionResult = await transcribeWithAssemblyAI(downloadResult.buffer);
@@ -734,6 +749,7 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                             const transcriptionFilename = `transcription-${transcript.callerNumber || 'unknown'}-${new Date().toISOString().split('T')[0]}-${recSid}`;
                             const transcriptionUpload = await uploadTranscriptionToStorage(transcriptionFilename, transcriptionResult);
                             if (transcriptionUpload.success) {
+                                transcriptionUrl = transcriptionUpload.location;
                                 console.log(`[Recording Background] ✓ Transcription saved to GCS`);
                             }
                         } else {
@@ -750,7 +766,18 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         contentType: downloadResult.contentType
                     }, transcriptionResult);
 
-                    console.log(`[Recording Background] ✓ Complete - recording${transcriptionResult?.success ? ' + transcription' : ''} processed and emailed`);
+                    // Send call log to external API with AssemblyAI transcription text
+                    const transcriptionText = transcriptionResult?.success ? transcriptionResult.text : null;
+                    await sendCallLog({
+                        callerNumber: callerNumber,
+                        callState: callState,
+                        transcript: transcript,
+                        transcriptionText: transcriptionText,
+                        transcriptionUrl: transcriptionUrl,
+                        recordingUrl: recordingUrl
+                    });
+
+                    console.log(`[Recording Background] ✓ Complete - recording${transcriptionResult?.success ? ' + transcription' : ''} processed, emailed, and logged`);
 
                 } catch (err) {
                     console.error(`[Recording Background] Error processing recording: ${err.message}`);
