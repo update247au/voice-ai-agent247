@@ -125,7 +125,9 @@ Full transcript attached as JSON file.
         const mailOptions = {
             from: fromEmail,
             to: targetEmail,
-            subject: `Call Transcript - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
+            subject: callState.property_name 
+                ? `${callState.property_name} : ${transcript.callerNumber || 'Unknown Caller'} : ${new Date().toLocaleDateString()}`
+                : `Call Transcript - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
             text: emailBody,
             attachments: [
                 {
@@ -246,7 +248,9 @@ Full transcript JSON and call recording attached.
         const mailOptions = {
             from: fromEmail,
             to: targetEmail,
-            subject: `Call Transcript + Recording - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
+            subject: callState.property_name 
+                ? `${callState.property_name} : ${transcript.callerNumber || 'Unknown Caller'} : ${new Date().toLocaleDateString()}`
+                : `Call Transcript + Recording - ${transcript.callerNumber || 'Unknown Caller'} - ${new Date().toLocaleDateString()}`,
             text: emailBody,
             attachments: attachments
         };
