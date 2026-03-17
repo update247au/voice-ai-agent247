@@ -8,7 +8,7 @@ export const getOpenAITools = () => {
         {
             type: "function",
             name: "save_caller_info",
-            description: "Save caller information collected during the call. Call this function whenever you learn any caller details like property name/ID, caller name, email, or their issue.",
+            description: "Save caller information collected during the call. Call this function whenever you learn any caller details. IMPORTANT: The response includes 'collected_info' showing ALL information collected so far. DO NOT ask for information that is already in collected_info (e.g., if is_logged_in is already set, don't ask again).",
             parameters: {
                 type: "object",
                 properties: {
@@ -18,7 +18,7 @@ export const getOpenAITools = () => {
                     caller_email: { type: "string", description: "Caller's email address" },
                     issue_description: { type: "string", description: "Brief description of their issue or question" },
                     is_existing_client: { type: "boolean", description: "Whether caller is an existing Update247 client" },
-                    is_logged_in: { type: "boolean", description: "Whether caller is currently logged into Update247" },
+                    is_logged_in: { type: "boolean", description: "Whether caller is currently logged into Update247. Once set, do not ask again." },
                     current_state: { type: "string", description: "Current state in the flow (A-H)" },
                     sales_need: { type: "string", description: "What the sales/new caller is looking for" },
                     demo_choice: { type: "string", description: "Demo preference: self_serve or book_demo", enum: ["self_serve", "book_demo"] },

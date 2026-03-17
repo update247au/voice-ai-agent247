@@ -24,11 +24,26 @@ export const handleSaveCallerInfo = (args, callState, callerNumber, response, op
     const last3 = phoneDigits.length >= 3 ? phoneDigits.slice(-3) : phoneDigits;
     const last3Spaced = last3 ? last3.split('').join(' ') : '';
     
+    // Build collected_info summary so AI knows what's already been collected
+    const collectedInfo = {
+        property_id: callState.property_id || null,
+        property_name: callState.property_name || null,
+        caller_name: callState.caller_name || null,
+        caller_email: callState.caller_email || null,
+        is_existing_client: callState.is_existing_client,
+        is_logged_in: callState.is_logged_in,
+        issue_description: callState.issue_description || null,
+        demo_choice: callState.demo_choice || null,
+        demo_preferred_time: callState.demo_preferred_time || null
+    };
+    
     const responseData = { 
         success: true, 
         saved: args,
+        collected_info: collectedInfo,
         caller_phone_last3: last3 || null,
-        caller_phone_available: !!callerNumber
+        caller_phone_available: !!callerNumber,
+        REMINDER: "DO NOT ask for information that is already in collected_info. If is_logged_in is true or false, do not ask again. If property_id is set, do not ask for it."
     };
     
     // When demo is booked, add explicit spoken instruction with the digits
