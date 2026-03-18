@@ -122,7 +122,16 @@ export const loadAgentSettings = async () => {
     // Helper function to load system message from file
     const loadSystemMessage = async () => {
         try {
-            // Try GCS first
+            // Try local file first (bundled in Docker image on each build)
+            const localPath = path.join(process.cwd(), 'ai-setting', 'u247-system-message.json');
+            if (fs.existsSync(localPath)) {
+                const content = fs.readFileSync(localPath, 'utf-8');
+                const sysMsg = JSON.parse(content);
+                console.log('✓ Loaded system message from local file:', localPath);
+                return sysMsg.system_message || DEFAULT_SYSTEM_MESSAGE;
+            }
+
+            // Fallback to GCS
             if (storage && GCS_BUCKET) {
                 try {
                     const sysMsgFile = storage.bucket(GCS_BUCKET).file('ai-setting/u247-system-message.json');
@@ -134,17 +143,8 @@ export const loadAgentSettings = async () => {
                         return sysMsg.system_message || DEFAULT_SYSTEM_MESSAGE;
                     }
                 } catch (err) {
-                    console.log('[loadSystemMessage] GCS lookup failed, trying local file. Error:', err.message);
+                    console.log('[loadSystemMessage] GCS lookup failed. Error:', err.message);
                 }
-            }
-
-            // Fallback to local file
-            const localPath = path.join(process.cwd(), 'ai-setting', 'u247-system-message.json');
-            if (fs.existsSync(localPath)) {
-                const content = fs.readFileSync(localPath, 'utf-8');
-                const sysMsg = JSON.parse(content);
-                console.log('✓ Loaded system message from local file:', localPath);
-                return sysMsg.system_message || DEFAULT_SYSTEM_MESSAGE;
             }
 
             console.log('⚠️  System message file not found (GCS or local), using embedded default');
