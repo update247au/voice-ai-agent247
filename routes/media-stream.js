@@ -31,7 +31,7 @@ import {
 } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 import { callMeta } from './incoming-call.js';
-import { getOutboundContext, clearOutboundContext } from './outbound-call.js';
+import { getOutboundContext, clearOutboundContext, outboundCallContext } from './outbound-call.js';
 
 // Register media stream WebSocket route
 export const registerMediaStreamRoute = (fastify, agentSettings) => {
@@ -93,8 +93,8 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
             if (urlParams.from) callerNumber = urlParams.from;
             if (urlParams.to) calleeNumber = urlParams.to;
             if (urlParams.callSid) callSid = urlParams.callSid;
-            const callDirection = urlParams.direction || 'inbound';
-            const isOutbound = callDirection === 'outbound';
+            let callDirection = urlParams.direction || 'inbound';
+            let isOutbound = callDirection === 'outbound';
             console.log('[DEBUG] Parsed from URL - from:', callerNumber, 'to:', calleeNumber, 'callSid:', callSid, 'direction:', callDirection);
 
             // For outbound calls, retrieve the stored context
@@ -104,11 +104,10 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                     outboundContext = getOutboundContext(callSid);
                 }
                 if (!outboundContext) {
-                    // Fallback: try all stored contexts (in case CallSid changed between legs)
-                    const { outboundCallContext } = await import('./outbound-call.js');
+                    // Fallback: try most recent stored context
                     const contextKeys = Object.keys(outboundCallContext);
                     if (contextKeys.length > 0) {
-                        const fallbackKey = contextKeys[contextKeys.length - 1]; // most recent
+                        const fallbackKey = contextKeys[contextKeys.length - 1];
                         outboundContext = outboundCallContext[fallbackKey];
                         console.log('[Outbound] Used fallback context from key:', fallbackKey);
                     }
@@ -484,7 +483,10 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                             if (nameLC === 'to') calleeNumber = p.value;
                                             if (nameLC === 'callsid') callSid = p.value;
                                             if (nameLC === 'direction' && p.value === 'outbound') {
+                                                isOutbound = true;
+                                                callDirection = 'outbound';
                                                 callState.direction = 'outbound';
+                                                console.log('[Outbound] ★ Direction detected from stream parameters');
                                             }
                                         }
                                     });
@@ -495,22 +497,36 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                         if (keyLC === 'to') calleeNumber = v;
                                         if (keyLC === 'callsid') callSid = v;
                                         if (keyLC === 'direction' && v === 'outbound') {
+                                            isOutbound = true;
+                                            callDirection = 'outbound';
                                             callState.direction = 'outbound';
+                                            console.log('[Outbound] ★ Direction detected from stream parameters');
                                         }
                                     });
                                 }
                             }
 
-                            // For outbound calls, try to retrieve context if not already loaded
+                            // For outbound calls, retrieve context if not already loaded
                             if (isOutbound && !outboundContext && callSid) {
                                 outboundContext = getOutboundContext(callSid);
+                                if (!outboundContext) {
+                                    // Fallback: try most recent stored context (in case CallSid differs between legs)
+                                    const contextKeys = Object.keys(outboundCallContext);
+                                    if (contextKeys.length > 0) {
+                                        const fallbackKey = contextKeys[contextKeys.length - 1];
+                                        outboundContext = getOutboundContext(fallbackKey);
+                                        console.log('[Outbound] Used fallback context from key:', fallbackKey);
+                                    }
+                                }
                                 if (outboundContext) {
-                                    console.log('[Outbound] Retrieved context from start event callSid:', callSid);
+                                    console.log('[Outbound] ★ Retrieved context:', JSON.stringify({ reason: outboundContext.reason, caller_name: outboundContext.caller_name, message: outboundContext.message }));
                                     callState.direction = 'outbound';
                                     callState.outbound_reason = outboundContext.reason || null;
                                     callState.caller_name = outboundContext.caller_name || null;
                                     callState.property_name = outboundContext.property_name || null;
                                     callState.property_id = outboundContext.property_id || null;
+                                } else {
+                                    console.log('[Outbound] ⚠️ No context found for callSid:', callSid);
                                 }
                             }
 
@@ -541,6 +557,21 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
                             // Send initial greeting IMMEDIATELY (no wait for phone lookup)
                             if (sessionInitialized && shouldSendInitialGreeting) {
+                                // If outbound was detected from stream params and session was already initialized with inbound settings,
+                                // re-send session.update with outbound settings before sending the greeting
+                                if (isOutbound && openAiWs.readyState === WebSocket.OPEN) {
+                                    console.log('[Outbound] ★ Re-initializing session with outbound settings (detected in start event)');
+                                    const ob = callSettings.outbound_settings || {};
+                                    const outboundSessionSettings = {
+                                        ...callSettings,
+                                        system_message: callSettings.outbound_system_message || callSettings.system_message,
+                                        voice: ob.voice || callSettings.voice,
+                                        temperature: ob.temperature !== undefined ? ob.temperature : callSettings.temperature
+                                    };
+                                    const sessionUpdate = createSessionUpdate(outboundSessionSettings);
+                                    openAiWs.send(JSON.stringify(sessionUpdate));
+                                    console.log('[Outbound] ★ Session updated with voice:', outboundSessionSettings.voice, 'temperature:', outboundSessionSettings.temperature);
+                                }
                                 shouldSendInitialGreeting = false;
                                 sendInitialConversationItem();
                             }
