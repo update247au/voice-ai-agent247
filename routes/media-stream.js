@@ -18,7 +18,8 @@ import {
     handleGetInterfaceScreenshots,
     handleGetFaqAnswer,
     handleEndCall,
-    handleGetWebsiteTroubleshooting 
+    handleGetWebsiteTroubleshooting,
+    handleSendEmailToPropertyOwner 
 } from '../handlers/functions.js';
 import { 
     createInitialCallState, 
@@ -253,6 +254,10 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
                         if (functionName === 'get_website_troubleshooting') {
                             callState = await handleGetWebsiteTroubleshooting(args, callState, response, openAiWs);
+                        }
+
+                        if (functionName === 'send_email_to_property_owner') {
+                            await handleSendEmailToPropertyOwner(args, response, openAiWs);
                         }
                     }
 

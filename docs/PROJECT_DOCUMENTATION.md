@@ -20,6 +20,7 @@ The Update247 AI Voice Agent is a real-time voice assistant that handles incomin
 7. [Inactivity Handling](#inactivity-handling)
 8. [Transcript & Storage](#transcript--storage)
 9. [Email Notifications](#email-notifications)
+10. [HTTP API Endpoints](#http-api-endpoints)
 
 ---
 
@@ -307,6 +308,46 @@ The AI agent has access to the following function tools:
 
 ---
 
+### 6. `get_website_troubleshooting`
+
+**Purpose:** Guide through collecting diagnostic information when a caller reports website issues.
+
+**When to use:** When caller reports their website is down or not working.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `website_address` | string | No | Website address or domain name |
+| `first_noticed` | string | No | When the issue was first noticed |
+| `error_message` | string | No | What error the caller sees |
+| `other_websites_working` | string | No | Whether other sites work (yes/no/not sure) |
+
+**Behavior:** Call multiple times - collects one answer at a time, then escalates to tech team when complete.
+
+---
+
+### 7. `send_email_to_property_owner`
+
+**Purpose:** Send an email message directly to a property owner.
+
+**When to use:** When you need to send information, confirmation, or any message to the property owner's email.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recipient_email` | string | Yes | Property owner's email address |
+| `message` | string | Yes | Message content to send |
+| `subject` | string | No | Email subject line (optional) |
+
+**Behavior:**
+1. Sends email via configured transporter (SMTP/AWS SES)
+2. BCC's `support@update247.com.au` on all emails
+3. Returns success/failure to the agent
+
+---
+
 ## State Machine Flow
 
 The agent follows a state machine to guide the conversation:
@@ -566,10 +607,102 @@ All events are logged to console:
 
 ---
 
+## HTTP API Endpoints
+
+### Server Base URL
+
+**Production (Google Cloud Run):**
+```
+https://cloudrun-ai247-452739190322.us-south1.run.app
+```
+
+### Available Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Health check, shows server info |
+| POST | `/incoming-call` | Twilio webhook for incoming calls |
+| WS | `/media-stream` | WebSocket for real-time audio |
+| POST | `/api/send-email` | Send email to property owner |
+| GET | `/api/send-email/health` | Email service health check |
+
+---
+
+### POST `/api/send-email`
+
+Send an email message to a property owner.
+
+**Full URL:**
+```
+https://cloudrun-ai247-452739190322.us-south1.run.app/api/send-email
+```
+
+**Headers:**
+```
+Content-Type: application/json
+X-API-Key: your-secret-key
+```
+
+**Request Body:**
+```json
+{
+  "recipient_email": "owner@hotel.com",
+  "message": "Your booking is confirmed for March 20th",
+  "subject": "Booking Confirmation"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `recipient_email` | string | Yes | Email address of the property owner |
+| `message` | string | Yes | Message content to send |
+| `subject` | string | No | Email subject (default: "Message from Update247 - [date]") |
+| `api_key` | string | No | Alternative to X-API-Key header |
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Email sent successfully",
+  "recipient": "owner@hotel.com",
+  "messageId": "abc123..."
+}
+```
+
+**Error Responses:**
+
+| Status | Response |
+|--------|----------|
+| 400 | `{"success": false, "error": "Missing required field: recipient_email"}` |
+| 401 | `{"success": false, "error": "Unauthorized - Invalid or missing API key"}` |
+| 500 | `{"success": false, "error": "Failed to send email"}` |
+
+**Example cURL:**
+```bash
+curl -X POST https://cloudrun-ai247-452739190322.us-south1.run.app/api/send-email \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{
+    "recipient_email": "owner@hotel.com",
+    "message": "Your booking has been confirmed.",
+    "subject": "Booking Confirmation"
+  }'
+```
+
+**Note:** All emails sent via this endpoint are BCC'd to `support@update247.com.au`.
+
+**Environment Variable:**
+```bash
+EMAIL_WEBHOOK_API_KEY=your-secret-key
+```
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1.0 | Mar 18, 2026 | Added send_email_to_property_owner tool, /api/send-email webhook |
 | 2.0.0 | Feb 10, 2026 | Modular refactor, email support, fixed inactivity timing |
 | 1.0.1 | Feb 7, 2026 | Phone lookup, disconnect tracking |
 | 1.0.0 | Feb 3, 2026 | Initial release |

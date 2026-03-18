@@ -279,6 +279,52 @@ Full transcript JSON and call recording attached.
     }
 };
 
+// Send a message email to property owner
+export const sendMessageToPropertyOwner = async (recipientEmail, message, subject = null) => {
+    if (!transporter) {
+        console.log('[Email] Cannot send email: No transporter configured');
+        return { success: false, error: 'Email not configured' };
+    }
+
+    if (!recipientEmail || !message) {
+        console.log('[Email] Cannot send email: Missing recipient email or message');
+        return { success: false, error: 'Missing recipient email or message' };
+    }
+
+    try {
+        const fromEmail = EMAIL_CONFIG.SES_FROM_EMAIL || 
+            (EMAIL_CONFIG.SMTP_USER && EMAIL_CONFIG.SMTP_USER.includes('@') ? EMAIL_CONFIG.SMTP_USER : null) || 
+            'noreply@update247.com.au';
+        
+        const emailSubject = subject || `Message from Update247 - ${new Date().toLocaleDateString()}`;
+        
+        const emailBody = `
+Hello,
+
+${message}
+
+---
+This message was sent on behalf of Update247.
+If you have any questions, please contact our support team.
+        `.trim();
+
+        const mailOptions = {
+            from: fromEmail,
+            to: recipientEmail,
+            bcc: 'support@update247.com.au',
+            subject: emailSubject,
+            text: emailBody
+        };
+
+        const result = await transporter.sendMail(mailOptions);
+        console.log(`[Email] ✓ Message sent to property owner at ${recipientEmail}`);
+        return { success: true, messageId: result.messageId, recipient: recipientEmail };
+    } catch (error) {
+        console.error('[Email] ✗ Failed to send message to property owner:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
 // Test email configuration
 export const testEmailConnection = async () => {
     if (!transporter) {

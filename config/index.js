@@ -65,7 +65,10 @@ export const EMAIL_CONFIG = {
     RECORDING_EMAIL: process.env.RECORDING_EMAIL || null,              // Email for recording + transcript
     TEST_EMAIL: process.env.TEST_EMAIL || null,
     TEST_CALLER_NUMBER: process.env.TEST_CALLER_NUMBER || '+61423489798',
-    EMAIL_ENABLED: process.env.EMAIL_ENABLED === 'true'
+    EMAIL_ENABLED: process.env.EMAIL_ENABLED === 'true',
+    
+    // Webhook API Key (for /api/send-email endpoint)
+    WEBHOOK_API_KEY: process.env.EMAIL_WEBHOOK_API_KEY || null
 };
 
 // OpenAI settings

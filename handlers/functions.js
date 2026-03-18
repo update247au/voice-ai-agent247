@@ -1,6 +1,7 @@
 // AI Function call handlers
 
 import { getTwilioClient, endCall } from '../services/twilio.js';
+import { sendMessageToPropertyOwner } from '../services/email.js';
 
 // Handle save_caller_info function call
 export const handleSaveCallerInfo = (args, callState, callerNumber, response, openAiWs) => {
@@ -408,4 +409,60 @@ export const handleGetWebsiteTroubleshooting = async (args, callState, response,
     openAiWs.send(JSON.stringify({ type: 'response.create' }));
     
     return callState;
+};
+
+// Handle send_email_to_property_owner function call
+export const handleSendEmailToPropertyOwner = async (args, response, openAiWs) => {
+    const { recipient_email, message, subject } = args;
+    console.log(`[Function Call] send_email_to_property_owner - Sending to: ${recipient_email}`);
+    
+    try {
+        const result = await sendMessageToPropertyOwner(recipient_email, message, subject);
+        
+        let responseData;
+        if (result.success) {
+            responseData = {
+                success: true,
+                message: `Email has been sent successfully to ${recipient_email}`,
+                INSTRUCTION: 'Confirm to the caller that the email has been sent successfully to the property owner.'
+            };
+            console.log('[Email] Successfully sent message to property owner:', recipient_email);
+        } else {
+            responseData = {
+                success: false,
+                error: result.error || 'Failed to send email',
+                INSTRUCTION: 'Apologize to the caller and let them know there was an issue sending the email. Offer to try again or suggest an alternative.'
+            };
+            console.error('[Email] Failed to send message to property owner:', result.error);
+        }
+        
+        const functionOutput = {
+            type: 'conversation.item.create',
+            item: {
+                type: 'function_call_output',
+                call_id: response.call_id,
+                output: JSON.stringify(responseData)
+            }
+        };
+        openAiWs.send(JSON.stringify(functionOutput));
+        openAiWs.send(JSON.stringify({ type: 'response.create' }));
+    } catch (error) {
+        console.error('[Email] Exception while sending email:', error.message);
+        
+        const errorOutput = {
+            type: 'conversation.item.create',
+            item: {
+                type: 'function_call_output',
+                call_id: response.call_id,
+                output: JSON.stringify({ 
+                    success: false, 
+                    error: 'An error occurred while sending the email',
+                    details: error.message,
+                    INSTRUCTION: 'Apologize for the technical issue and offer to help in another way.'
+                })
+            }
+        };
+        openAiWs.send(JSON.stringify(errorOutput));
+        openAiWs.send(JSON.stringify({ type: 'response.create' }));
+    }
 };

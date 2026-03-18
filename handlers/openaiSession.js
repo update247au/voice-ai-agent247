@@ -105,6 +105,20 @@ export const getOpenAITools = () => {
                     other_websites_working: { type: "string", description: "Whether other websites are working fine for the caller (yes/no/not sure)" }
                 }
             }
+        },
+        {
+            type: "function",
+            name: "send_email_to_property_owner",
+            description: "Send an email message to a property owner. Use this when you need to send information, a summary, or any message directly to the property owner's email address.",
+            parameters: {
+                type: "object",
+                properties: {
+                    recipient_email: { type: "string", description: "The email address of the property owner to send the message to" },
+                    message: { type: "string", description: "The message content to send to the property owner" },
+                    subject: { type: "string", description: "Optional email subject line. If not provided, a default subject will be used." }
+                },
+                required: ["recipient_email", "message"]
+            }
         }
     ];
 };
