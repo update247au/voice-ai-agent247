@@ -99,17 +99,29 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
             // For outbound calls, retrieve the stored context
             let outboundContext = null;
-            if (isOutbound && callSid) {
-                outboundContext = getOutboundContext(callSid);
+            if (isOutbound) {
+                if (callSid) {
+                    outboundContext = getOutboundContext(callSid);
+                }
+                if (!outboundContext) {
+                    // Fallback: try all stored contexts (in case CallSid changed between legs)
+                    const { outboundCallContext } = await import('./outbound-call.js');
+                    const contextKeys = Object.keys(outboundCallContext);
+                    if (contextKeys.length > 0) {
+                        const fallbackKey = contextKeys[contextKeys.length - 1]; // most recent
+                        outboundContext = outboundCallContext[fallbackKey];
+                        console.log('[Outbound] Used fallback context from key:', fallbackKey);
+                    }
+                }
                 if (outboundContext) {
-                    console.log('[Outbound] Retrieved call context:', { reason: outboundContext.reason, caller_name: outboundContext.caller_name });
+                    console.log('[Outbound] Retrieved call context:', JSON.stringify({ reason: outboundContext.reason, caller_name: outboundContext.caller_name, message: outboundContext.message }));
                     callState.direction = 'outbound';
                     callState.outbound_reason = outboundContext.reason || null;
                     callState.caller_name = outboundContext.caller_name || null;
                     callState.property_name = outboundContext.property_name || null;
                     callState.property_id = outboundContext.property_id || null;
                 } else {
-                    console.log('[Outbound] No stored context found for callSid:', callSid);
+                    console.log('[Outbound] ⚠️ No stored context found. callSid:', callSid);
                 }
             }
 
@@ -155,7 +167,7 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
             // Send initial greeting (caller context injected separately after phone lookup)
             const sendInitialConversationItem = () => {
-                console.log('[sendInitialConversationItem] Sending initial greeting to OpenAI');
+                console.log('[sendInitialConversationItem] isOutbound:', isOutbound, 'hasOutboundContext:', !!outboundContext);
                 let greetingText;
                 
                 if (isOutbound && outboundContext) {
