@@ -16,7 +16,7 @@ import fastifyFormBody from '@fastify/formbody';
 import fastifyWs from '@fastify/websocket';
 
 // Import configuration
-import { PORT, validateConfig } from './config/index.js';
+import { PORT, validateConfig, OUTBOUND_CALL_CONFIG } from './config/index.js';
 
 // Import services
 import { initializeStorage, loadAgentSettings } from './services/storage.js';
@@ -87,6 +87,7 @@ const start = async () => {
         console.log('  ✓ /media-stream');
         console.log('  ✓ /api/send-email');
         console.log('  ✓ /api/outbound-call');
+        console.log('  ✓ Outbound calls enabled:', OUTBOUND_CALL_CONFIG.ENABLED, '(raw env:', process.env.OUTBOUND_CALL_ENABLED, ')');
 
         // Start server
         await fastify.listen({ port: PORT, host: '0.0.0.0' });

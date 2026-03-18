@@ -23,7 +23,7 @@ export const PORT = Number(process.env.PORT) || 8080;
 // Outbound call configuration
 export const OUTBOUND_CALL_CONFIG = {
     API_KEY: process.env.OUTBOUND_CALL_API_KEY || null,
-    ENABLED: process.env.OUTBOUND_CALL_ENABLED === 'true',
+    ENABLED: (process.env.OUTBOUND_CALL_ENABLED || '').trim().toLowerCase() === 'true',
     DEFAULT_GREETING: process.env.OUTBOUND_CALL_GREETING || 'Greet the person and introduce yourself as calling from Update 2 4 7.'
 };
 
