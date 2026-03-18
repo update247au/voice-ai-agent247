@@ -1,5 +1,5 @@
 import twilio from 'twilio';
-import { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN } from '../config/index.js';
+import { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, SERVER_PUBLIC_URL } from '../config/index.js';
 
 let twilioClient = null;
 
@@ -146,5 +146,41 @@ export const downloadRecording = async (recordingSid, options = {}) => {
 
 // Helper sleep function
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Make an outbound call
+export const makeOutboundCall = async (toNumber, context = {}) => {
+    if (!twilioClient) {
+        return { success: false, error: 'Twilio client not initialized' };
+    }
+    if (!TWILIO_PHONE_NUMBER) {
+        return { success: false, error: 'TWILIO_PHONE_NUMBER not configured' };
+    }
+    if (!toNumber) {
+        return { success: false, error: 'No phone number provided' };
+    }
+
+    try {
+        // Build the TwiML URL with context as query params
+        const contextEncoded = encodeURIComponent(JSON.stringify(context));
+        const twimlUrl = `https://${SERVER_PUBLIC_URL}/outbound-twiml?context=${contextEncoded}&to=${encodeURIComponent(toNumber)}`;
+
+        console.log('[Outbound Call] Creating call to:', toNumber, 'from:', TWILIO_PHONE_NUMBER);
+
+        const call = await twilioClient.calls.create({
+            to: toNumber,
+            from: TWILIO_PHONE_NUMBER,
+            url: twimlUrl,
+            statusCallback: `https://${SERVER_PUBLIC_URL}/outbound-status`,
+            statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+            statusCallbackMethod: 'POST'
+        });
+
+        console.log('[Outbound Call] ✓ Call created:', call.sid);
+        return { success: true, callSid: call.sid, to: toNumber, from: TWILIO_PHONE_NUMBER };
+    } catch (err) {
+        console.error('[Outbound Call] ✗ Failed:', err.message);
+        return { success: false, error: err.message };
+    }
+};
 
 export { twilioClient };

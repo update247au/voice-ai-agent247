@@ -31,6 +31,7 @@ import {
 } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 import { callMeta } from './incoming-call.js';
+import { getOutboundContext } from './outbound-call.js';
 
 // Register media stream WebSocket route
 export const registerMediaStreamRoute = (fastify, agentSettings) => {
@@ -92,7 +93,25 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
             if (urlParams.from) callerNumber = urlParams.from;
             if (urlParams.to) calleeNumber = urlParams.to;
             if (urlParams.callSid) callSid = urlParams.callSid;
-            console.log('[DEBUG] Parsed from URL - from:', callerNumber, 'to:', calleeNumber, 'callSid:', callSid);
+            const callDirection = urlParams.direction || 'inbound';
+            const isOutbound = callDirection === 'outbound';
+            console.log('[DEBUG] Parsed from URL - from:', callerNumber, 'to:', calleeNumber, 'callSid:', callSid, 'direction:', callDirection);
+
+            // For outbound calls, retrieve the stored context
+            let outboundContext = null;
+            if (isOutbound && callSid) {
+                outboundContext = getOutboundContext(callSid);
+                if (outboundContext) {
+                    console.log('[Outbound] Retrieved call context:', { reason: outboundContext.reason, caller_name: outboundContext.caller_name });
+                    callState.direction = 'outbound';
+                    callState.outbound_reason = outboundContext.reason || null;
+                    callState.caller_name = outboundContext.caller_name || null;
+                    callState.property_name = outboundContext.property_name || null;
+                    callState.property_id = outboundContext.property_id || null;
+                } else {
+                    console.log('[Outbound] No stored context found for callSid:', callSid);
+                }
+            }
 
             // Try to attach saved webhook body
             if (callSid && callMeta[callSid]) {
@@ -126,7 +145,21 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
             // Send initial greeting (caller context injected separately after phone lookup)
             const sendInitialConversationItem = () => {
                 console.log('[sendInitialConversationItem] Sending initial greeting to OpenAI');
-                const greetingText = callSettings.initial_greeting || 'Greet the user with : Hi there, How are you today?';
+                let greetingText;
+                
+                if (isOutbound && outboundContext) {
+                    // Outbound call: use the provided greeting/message
+                    const name = outboundContext.caller_name ? ` ${outboundContext.caller_name}` : '';
+                    const reason = outboundContext.reason || outboundContext.message || '';
+                    greetingText = outboundContext.greeting || `Greet the person and say: Hi${name}, this is the Update247 support team calling.`;
+                    if (reason) {
+                        greetingText += ` The reason for the call is: ${reason}`;
+                    }
+                    console.log('[Outbound] Using outbound greeting:', greetingText);
+                } else {
+                    greetingText = callSettings.initial_greeting || 'Greet the user with : Hi there, How are you today?';
+                }
+                
                 const initialConversationItem = createInitialGreeting(greetingText);
                 openAiWs.send(JSON.stringify(initialConversationItem));
                 openAiWs.send(JSON.stringify({ type: 'response.create' }));
@@ -427,6 +460,9 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                             if (nameLC === 'from') callerNumber = p.value;
                                             if (nameLC === 'to') calleeNumber = p.value;
                                             if (nameLC === 'callsid') callSid = p.value;
+                                            if (nameLC === 'direction' && p.value === 'outbound') {
+                                                callState.direction = 'outbound';
+                                            }
                                         }
                                     });
                                 } else if (typeof params === 'object') {
@@ -435,7 +471,23 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                         if (keyLC === 'from') callerNumber = v;
                                         if (keyLC === 'to') calleeNumber = v;
                                         if (keyLC === 'callsid') callSid = v;
+                                        if (keyLC === 'direction' && v === 'outbound') {
+                                            callState.direction = 'outbound';
+                                        }
                                     });
+                                }
+                            }
+
+                            // For outbound calls, try to retrieve context if not already loaded
+                            if (isOutbound && !outboundContext && callSid) {
+                                outboundContext = getOutboundContext(callSid);
+                                if (outboundContext) {
+                                    console.log('[Outbound] Retrieved context from start event callSid:', callSid);
+                                    callState.direction = 'outbound';
+                                    callState.outbound_reason = outboundContext.reason || null;
+                                    callState.caller_name = outboundContext.caller_name || null;
+                                    callState.property_name = outboundContext.property_name || null;
+                                    callState.property_id = outboundContext.property_id || null;
                                 }
                             }
 
@@ -472,6 +524,35 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
                             // Phone lookup runs in BACKGROUND (non-blocking)
                             // Once complete, inject caller context into the conversation
+                            if (isOutbound && outboundContext) {
+                                // ─── OUTBOUND: Inject outbound context into AI session ───
+                                callState.phone_lookup_performed = false;
+                                callState.direction = 'outbound';
+                                console.log('[Outbound] Skipping phone lookup - injecting outbound context');
+                                
+                                if (openAiWs.readyState === WebSocket.OPEN) {
+                                    let contextParts = ['[OUTBOUND CALL CONTEXT - DO NOT READ ALOUD:'];
+                                    contextParts.push('This is an OUTBOUND call initiated by the system.');
+                                    if (outboundContext.caller_name) contextParts.push(`Person being called: ${outboundContext.caller_name}.`);
+                                    if (outboundContext.property_name) contextParts.push(`Property: ${outboundContext.property_name}.`);
+                                    if (outboundContext.property_id) contextParts.push(`Property ID: ${outboundContext.property_id}.`);
+                                    if (outboundContext.reason) contextParts.push(`Reason for call: ${outboundContext.reason}.`);
+                                    if (outboundContext.message) contextParts.push(`Message to deliver: ${outboundContext.message}.`);
+                                    contextParts.push('Introduce yourself, explain why you are calling, and deliver the message. Be conversational and helpful.]');
+                                    
+                                    const contextItem = {
+                                        type: 'conversation.item.create',
+                                        item: {
+                                            type: 'message',
+                                            role: 'user',
+                                            content: [{ type: 'input_text', text: contextParts.join(' ') }]
+                                        }
+                                    };
+                                    openAiWs.send(JSON.stringify(contextItem));
+                                    console.log('[Outbound] ✓ Context injected into AI session');
+                                }
+                            } else {
+                            // ─── INBOUND: Standard phone lookup ───
                             (async () => {
                                 if (callerNumber) {
                                     callState.phone_lookup_performed = true;
@@ -551,6 +632,7 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                     callState.is_likely_existing_client = false;
                                 }
                             })();
+                            } // end inbound/outbound branch
 
                             // Start recording
                             if (callSid) {

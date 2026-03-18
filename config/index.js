@@ -16,7 +16,16 @@ export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const GCS_BUCKET = process.env.GCS_BUCKET || process.env.GOOGLE_CLOUD_BUCKET || null;
 export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || null;
 export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || null;
+export const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || null;
+export const SERVER_PUBLIC_URL = process.env.SERVER_PUBLIC_URL || 'cloudrun-ai247-452739190322.us-south1.run.app';
 export const PORT = Number(process.env.PORT) || 8080;
+
+// Outbound call configuration
+export const OUTBOUND_CALL_CONFIG = {
+    API_KEY: process.env.OUTBOUND_CALL_API_KEY || null,
+    ENABLED: process.env.OUTBOUND_CALL_ENABLED === 'true',
+    DEFAULT_GREETING: process.env.OUTBOUND_CALL_GREETING || 'Greet the person and introduce yourself as calling from Update 2 4 7.'
+};
 
 // Phone lookup API configuration
 export const PHONE_LOOKUP_CONFIG = {

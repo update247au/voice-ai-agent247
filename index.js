@@ -27,6 +27,7 @@ import { initializeEmail } from './services/email.js';
 import { registerIncomingCallRoute } from './routes/incoming-call.js';
 import { registerMediaStreamRoute } from './routes/media-stream.js';
 import { registerSendEmailRoute } from './routes/send-email.js';
+import { registerOutboundCallRoute } from './routes/outbound-call.js';
 
 // Validate configuration
 validateConfig();
@@ -46,7 +47,9 @@ fastify.get('/', async (request, reply) => {
             incomingCall: '/incoming-call',
             mediaStream: '/media-stream (WebSocket)',
             sendEmail: '/api/send-email (POST)',
-            sendEmailHealth: '/api/send-email/health'
+            sendEmailHealth: '/api/send-email/health',
+            outboundCall: '/api/outbound-call (POST)',
+            outboundCallHealth: '/api/outbound-call/health'
         }
     });
 });
@@ -79,9 +82,11 @@ const start = async () => {
         registerIncomingCallRoute(fastify);
         registerMediaStreamRoute(fastify, agentSettings);
         registerSendEmailRoute(fastify);
+        registerOutboundCallRoute(fastify);
         console.log('  ✓ /incoming-call');
         console.log('  ✓ /media-stream');
         console.log('  ✓ /api/send-email');
+        console.log('  ✓ /api/outbound-call');
 
         // Start server
         await fastify.listen({ port: PORT, host: '0.0.0.0' });

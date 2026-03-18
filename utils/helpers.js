@@ -53,11 +53,12 @@ export const parseUrlParams = (url) => {
         return {
             from: parsed.searchParams.get('from') || parsed.searchParams.get('From') || parsed.searchParams.get('caller') || parsed.searchParams.get('Caller'),
             to: parsed.searchParams.get('to') || parsed.searchParams.get('To'),
-            callSid: parsed.searchParams.get('callSid') || parsed.searchParams.get('CallSid') || parsed.searchParams.get('callsid')
+            callSid: parsed.searchParams.get('callSid') || parsed.searchParams.get('CallSid') || parsed.searchParams.get('callsid'),
+            direction: parsed.searchParams.get('direction') || null
         };
     } catch (err) {
         console.error('[parseUrlParams] Error:', err.message);
-        return { from: null, to: null, callSid: null };
+        return { from: null, to: null, callSid: null, direction: null };
     }
 };
 
