@@ -472,8 +472,9 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                             callerNumber = data.start.from || data.start.From || callerNumber || null;
                             calleeNumber = data.start.to || data.start.To || calleeNumber || null;
 
-                            // Process parameters
-                            const params = data.start.parameters || null;
+                            // Process custom parameters (Twilio sends <Parameter> values in customParameters)
+                            const params = data.start.customParameters || data.start.parameters || null;
+                            console.log('[DEBUG] Stream start params:', JSON.stringify(params));
                             if (params) {
                                 if (Array.isArray(params)) {
                                     params.forEach((p) => {
