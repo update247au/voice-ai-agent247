@@ -195,12 +195,29 @@ export const loadAgentSettings = async () => {
     }
 
     try {
-        // Load settings from GCS bucket
-        const settingsFile = storage.bucket(GCS_BUCKET).file('ai-setting/u247-agent.json');
-        const [exists] = await settingsFile.exists();
-        
-        if (!exists) {
-            console.log('⚠️  Settings file not found in GCS (gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json). Using default settings.');
+        // Load agent settings: local file first, GCS fallback
+        let settings = null;
+        const localAgentPath = path.join(process.cwd(), 'ai-setting', 'u247-agent.json');
+        if (fs.existsSync(localAgentPath)) {
+            const content = fs.readFileSync(localAgentPath, 'utf-8');
+            settings = JSON.parse(content);
+            console.log('✓ Loaded agent settings from local file:', localAgentPath);
+            console.log('  - voice:', settings.voice);
+            console.log('  - temperature:', settings.temperature);
+        } else if (storage && GCS_BUCKET) {
+            const settingsFile = storage.bucket(GCS_BUCKET).file('ai-setting/u247-agent.json');
+            const [exists] = await settingsFile.exists();
+            if (exists) {
+                const [fileContent] = await settingsFile.download();
+                settings = JSON.parse(fileContent.toString('utf-8'));
+                console.log('✓ Loaded agent settings from GCS (fallback): gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json');
+                console.log('  - voice:', settings.voice);
+                console.log('  - temperature:', settings.temperature);
+            }
+        }
+
+        if (!settings) {
+            console.log('⚠️  Agent settings file not found (local or GCS). Using defaults.');
             const systemMsg = await loadSystemMessage();
             const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
             const outboundAgent = loadOutboundAgentSettings();
@@ -214,13 +231,6 @@ export const loadAgentSettings = async () => {
                 initial_greeting: 'Greet the user with : This is Lucy from Update 2 4 7. How are you today?'
             };
         }
-
-        const [fileContent] = await settingsFile.download();
-        const settings = JSON.parse(fileContent.toString('utf-8'));
-        
-        console.log('✓ Loaded agent settings from GCS: gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json');
-        console.log('  - voice:', settings.voice);
-        console.log('  - temperature:', settings.temperature);
         
         // Load system messages from separate files
         const systemMsg = await loadSystemMessage();
