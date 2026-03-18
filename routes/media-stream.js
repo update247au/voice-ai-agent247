@@ -31,7 +31,7 @@ import {
 } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 import { callMeta } from './incoming-call.js';
-import { getOutboundContext } from './outbound-call.js';
+import { getOutboundContext, clearOutboundContext } from './outbound-call.js';
 
 // Register media stream WebSocket route
 export const registerMediaStreamRoute = (fastify, agentSettings) => {
@@ -554,6 +554,8 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                                     };
                                     openAiWs.send(JSON.stringify(contextItem));
                                     console.log('[Outbound] ✓ Context injected into AI session');
+                                    // Clean up stored context now that it's been used
+                                    if (callSid) clearOutboundContext(callSid);
                                 }
                             } else {
                             // ─── INBOUND: Standard phone lookup ───

@@ -169,9 +169,14 @@ export const registerOutboundCallRoute = (fastify) => {
 // Get outbound call context for a callSid
 export const getOutboundContext = (callSid) => {
     if (callSid && outboundCallContext[callSid]) {
-        const context = outboundCallContext[callSid];
-        delete outboundCallContext[callSid]; // Free memory after retrieval
-        return context;
+        return outboundCallContext[callSid];
     }
     return null;
+};
+
+// Remove outbound call context after use
+export const clearOutboundContext = (callSid) => {
+    if (callSid) {
+        delete outboundCallContext[callSid];
+    }
 };
