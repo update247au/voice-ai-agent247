@@ -129,8 +129,12 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
 
             // Initialize OpenAI session
             const initializeSession = () => {
-                console.log('[initializeSession] Using system_message length:', callSettings.system_message ? callSettings.system_message.length : 'undefined', 'voice:', callSettings.voice);
-                const sessionUpdate = createSessionUpdate(callSettings);
+                // Use outbound system message for outbound calls
+                const sessionSettings = isOutbound && callSettings.outbound_system_message
+                    ? { ...callSettings, system_message: callSettings.outbound_system_message }
+                    : callSettings;
+                console.log('[initializeSession] direction:', isOutbound ? 'outbound' : 'inbound', 'system_message length:', sessionSettings.system_message ? sessionSettings.system_message.length : 'undefined', 'voice:', sessionSettings.voice);
+                const sessionUpdate = createSessionUpdate(sessionSettings);
                 console.log('Sending session update:', JSON.stringify(sessionUpdate));
                 openAiWs.send(JSON.stringify(sessionUpdate));
                 sessionInitialized = true;

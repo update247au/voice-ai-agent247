@@ -120,34 +120,34 @@ export const loadFromStorage = async (filename, localFallbackPath = null) => {
 // Load agent settings from GCS bucket
 export const loadAgentSettings = async () => {
     // Helper function to load system message from file
-    const loadSystemMessage = async () => {
+    const loadSystemMessage = async (filename = 'u247-system-message.json') => {
         try {
             // Try local file first (bundled in Docker image on each build)
-            const localPath = path.join(process.cwd(), 'ai-setting', 'u247-system-message.json');
+            const localPath = path.join(process.cwd(), 'ai-setting', filename);
             if (fs.existsSync(localPath)) {
                 const content = fs.readFileSync(localPath, 'utf-8');
                 const sysMsg = JSON.parse(content);
-                console.log('✓ Loaded system message from local file:', localPath);
+                console.log(`✓ Loaded system message from local file: ${localPath}`);
                 return sysMsg.system_message || DEFAULT_SYSTEM_MESSAGE;
             }
 
             // Fallback to GCS
             if (storage && GCS_BUCKET) {
                 try {
-                    const sysMsgFile = storage.bucket(GCS_BUCKET).file('ai-setting/u247-system-message.json');
+                    const sysMsgFile = storage.bucket(GCS_BUCKET).file(`ai-setting/${filename}`);
                     const [exists] = await sysMsgFile.exists();
                     if (exists) {
                         const [content] = await sysMsgFile.download();
                         const sysMsg = JSON.parse(content.toString('utf-8'));
-                        console.log('✓ Loaded system message from GCS: gs://' + GCS_BUCKET + '/ai-setting/u247-system-message.json');
+                        console.log(`✓ Loaded system message from GCS: gs://${GCS_BUCKET}/ai-setting/${filename}`);
                         return sysMsg.system_message || DEFAULT_SYSTEM_MESSAGE;
                     }
                 } catch (err) {
-                    console.log('[loadSystemMessage] GCS lookup failed. Error:', err.message);
+                    console.log(`[loadSystemMessage] GCS lookup failed for ${filename}. Error:`, err.message);
                 }
             }
 
-            console.log('⚠️  System message file not found (GCS or local), using embedded default');
+            console.log(`⚠️  System message file not found (${filename}), using embedded default`);
             return DEFAULT_SYSTEM_MESSAGE;
         } catch (err) {
             console.error('✗ Error loading system message:', err.message);
@@ -159,8 +159,10 @@ export const loadAgentSettings = async () => {
     if (!GCS_BUCKET || !storage) {
         console.log('ℹ️  GCS not configured. Loading settings from local files.');
         const systemMsg = await loadSystemMessage();
+        const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
         return {
             system_message: systemMsg,
+            outbound_system_message: outboundMsg,
             voice: 'sage',
             temperature: 0.2,
             use_realtime_transcription: false,
@@ -176,8 +178,10 @@ export const loadAgentSettings = async () => {
         if (!exists) {
             console.log('⚠️  Settings file not found in GCS (gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json). Using default settings.');
             const systemMsg = await loadSystemMessage();
+            const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
             return {
                 system_message: systemMsg,
+                outbound_system_message: outboundMsg,
                 voice: 'sage',
                 temperature: 0.2,
                 use_realtime_transcription: false,
@@ -192,11 +196,13 @@ export const loadAgentSettings = async () => {
         console.log('  - voice:', settings.voice);
         console.log('  - temperature:', settings.temperature);
         
-        // Load system message from separate file
+        // Load system messages from separate files
         const systemMsg = await loadSystemMessage();
+        const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
         
         const finalSettings = {
             system_message: systemMsg,
+            outbound_system_message: outboundMsg,
             voice: settings.voice || 'sage',
             temperature: settings.temperature !== undefined ? settings.temperature : 0.2,
             use_realtime_transcription: settings.use_realtime_transcription || false,
@@ -204,13 +210,16 @@ export const loadAgentSettings = async () => {
         };
         
         console.log('✓ Final settings to use - system_message length:', finalSettings.system_message.length);
+        console.log('✓ Outbound system_message length:', finalSettings.outbound_system_message.length);
         return finalSettings;
     } catch (error) {
         console.error('✗ Error loading agent settings from GCS:', error.message);
         console.log('  Falling back to default system message.');
         const systemMsg = await loadSystemMessage();
+        const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
         return {
             system_message: systemMsg,
+            outbound_system_message: outboundMsg,
             voice: 'sage',
             temperature: 0.2,
             use_realtime_transcription: false,
