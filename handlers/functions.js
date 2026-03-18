@@ -412,18 +412,23 @@ export const handleGetWebsiteTroubleshooting = async (args, callState, response,
 };
 
 // Handle send_email_to_property_owner function call
-export const handleSendEmailToPropertyOwner = async (args, response, openAiWs) => {
-    const { recipient_email, message, subject } = args;
-    console.log(`[Function Call] send_email_to_property_owner - Sending to: ${recipient_email}`);
+export const handleSendEmailToPropertyOwner = async (args, callState, response, openAiWs) => {
+    const { recipient_email, message, subject, template } = args;
+    
+    // Determine template based on call routing or explicit parameter
+    const templateType = template || (callState?.routing === 'sales' ? 'sales' : 'support');
+    
+    console.log(`[Function Call] send_email_to_property_owner - Sending to: ${recipient_email} (template: ${templateType})`);
     
     try {
-        const result = await sendMessageToPropertyOwner(recipient_email, message, subject);
+        const result = await sendMessageToPropertyOwner(recipient_email, message, subject, templateType);
         
         let responseData;
         if (result.success) {
             responseData = {
                 success: true,
                 message: `Email has been sent successfully to ${recipient_email}`,
+                template_used: result.template,
                 INSTRUCTION: 'Confirm to the caller that the email has been sent successfully to the property owner.'
             };
             console.log('[Email] Successfully sent message to property owner:', recipient_email);

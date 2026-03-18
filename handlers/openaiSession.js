@@ -115,7 +115,8 @@ export const getOpenAITools = () => {
                 properties: {
                     recipient_email: { type: "string", description: "The email address of the property owner to send the message to" },
                     message: { type: "string", description: "The message content to send to the property owner" },
-                    subject: { type: "string", description: "Optional email subject line. If not provided, a default subject will be used." }
+                    subject: { type: "string", description: "Optional email subject line. If not provided, a default subject will be used." },
+                    template: { type: "string", description: "Email template to use: 'support' (default) or 'sales'. If not specified, will auto-select based on call routing.", enum: ["support", "sales"] }
                 },
                 required: ["recipient_email", "message"]
             }

@@ -2,12 +2,59 @@
 // Supports both SMTP (cPanel) and Amazon SES
 
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 import { EMAIL_CONFIG } from '../config/index.js';
 
 let transporter = null;
+let emailTemplates = {};
+
+// Load email templates from files
+const loadEmailTemplates = () => {
+    const templatesDir = path.join(process.cwd(), 'ai-setting', 'email-templates');
+    
+    try {
+        // Load support template
+        const supportPath = path.join(templatesDir, 'support.html');
+        if (fs.existsSync(supportPath)) {
+            emailTemplates.support = fs.readFileSync(supportPath, 'utf8');
+            console.log('[Email] ✓ Loaded support email template');
+        }
+        
+        // Load sales template
+        const salesPath = path.join(templatesDir, 'sales.html');
+        if (fs.existsSync(salesPath)) {
+            emailTemplates.sales = fs.readFileSync(salesPath, 'utf8');
+            console.log('[Email] ✓ Loaded sales email template');
+        }
+    } catch (error) {
+        console.error('[Email] ⚠️ Failed to load email templates:', error.message);
+    }
+};
+
+// Get email template with message replaced
+const getEmailTemplate = (templateType, message) => {
+    const template = emailTemplates[templateType];
+    
+    if (!template) {
+        // Fallback to plain text if template not found
+        console.log(`[Email] Template '${templateType}' not found, using plain text`);
+        return null;
+    }
+    
+    // Replace placeholders
+    let html = template
+        .replace(/\{\{MESSAGE\}\}/g, message.replace(/\n/g, '<br>'))
+        .replace(/\{\{YEAR\}\}/g, new Date().getFullYear().toString());
+    
+    return html;
+};
 
 // Initialize email transporter
 export const initializeEmail = () => {
+    // Load email templates first
+    loadEmailTemplates();
+    
     if (!EMAIL_CONFIG.EMAIL_ENABLED) {
         console.log('[Email] Email notifications disabled (EMAIL_ENABLED not set to true)');
         return null;
@@ -280,7 +327,8 @@ Full transcript JSON and call recording attached.
 };
 
 // Send a message email to property owner
-export const sendMessageToPropertyOwner = async (recipientEmail, message, subject = null) => {
+// templateType: 'support' | 'sales' | null (plain text)
+export const sendMessageToPropertyOwner = async (recipientEmail, message, subject = null, templateType = 'support') => {
     if (!transporter) {
         console.log('[Email] Cannot send email: No transporter configured');
         return { success: false, error: 'Email not configured' };
@@ -298,7 +346,11 @@ export const sendMessageToPropertyOwner = async (recipientEmail, message, subjec
         
         const emailSubject = subject || `Message from Update247 - ${new Date().toLocaleDateString()}`;
         
-        const emailBody = `
+        // Try to get HTML template
+        const htmlContent = templateType ? getEmailTemplate(templateType, message) : null;
+        
+        // Plain text fallback
+        const plainTextBody = `
 Hello,
 
 ${message}
@@ -306,6 +358,9 @@ ${message}
 ---
 This message was sent on behalf of Update247.
 If you have any questions, please contact our support team.
+
+Update247 - Channel Manager & Booking Solutions
+Email: support@update247.com.au | Phone: +61 2 9099 9916
         `.trim();
 
         const mailOptions = {
@@ -313,16 +368,27 @@ If you have any questions, please contact our support team.
             to: recipientEmail,
             bcc: 'support@update247.com.au',
             subject: emailSubject,
-            text: emailBody
+            text: plainTextBody  // Always include plain text for email clients that don't support HTML
         };
+        
+        // Add HTML if template was found
+        if (htmlContent) {
+            mailOptions.html = htmlContent;
+            console.log(`[Email] Using '${templateType}' HTML template`);
+        }
 
         const result = await transporter.sendMail(mailOptions);
-        console.log(`[Email] ✓ Message sent to property owner at ${recipientEmail}`);
-        return { success: true, messageId: result.messageId, recipient: recipientEmail };
+        console.log(`[Email] ✓ Message sent to property owner at ${recipientEmail} (template: ${templateType || 'plain'})`);
+        return { success: true, messageId: result.messageId, recipient: recipientEmail, template: templateType || 'plain' };
     } catch (error) {
         console.error('[Email] ✗ Failed to send message to property owner:', error.message);
         return { success: false, error: error.message };
     }
+};
+
+// Get available email templates
+export const getAvailableTemplates = () => {
+    return Object.keys(emailTemplates);
 };
 
 // Test email configuration

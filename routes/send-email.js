@@ -2,7 +2,10 @@
 // POST /api/send-email - External systems can call this to send emails
 
 import { EMAIL_CONFIG } from '../config/index.js';
-import { sendMessageToPropertyOwner } from '../services/email.js';
+import { sendMessageToPropertyOwner, getAvailableTemplates } from '../services/email.js';
+
+// Valid template types
+const VALID_TEMPLATES = ['support', 'sales'];
 
 // Register the send-email webhook route
 export const registerSendEmailRoute = (fastify) => {
@@ -27,7 +30,7 @@ export const registerSendEmailRoute = (fastify) => {
         }
         
         // Validate request body
-        const { recipient_email, message, subject } = request.body || {};
+        const { recipient_email, message, subject, template } = request.body || {};
         
         if (!recipient_email) {
             return reply.status(400).send({
@@ -52,10 +55,19 @@ export const registerSendEmailRoute = (fastify) => {
             });
         }
         
+        // Validate template if provided
+        const templateType = template || 'support';  // Default to support template
+        if (template && !VALID_TEMPLATES.includes(template)) {
+            return reply.status(400).send({
+                success: false,
+                error: `Invalid template: '${template}'. Valid options: ${VALID_TEMPLATES.join(', ')}`
+            });
+        }
+        
         try {
             // Send the email
-            console.log(`[Webhook] Sending email to: ${recipient_email}`);
-            const result = await sendMessageToPropertyOwner(recipient_email, message, subject);
+            console.log(`[Webhook] Sending email to: ${recipient_email} (template: ${templateType})`);
+            const result = await sendMessageToPropertyOwner(recipient_email, message, subject, templateType);
             
             if (result.success) {
                 console.log(`[Webhook] ✓ Email sent successfully to ${recipient_email}`);
@@ -63,6 +75,7 @@ export const registerSendEmailRoute = (fastify) => {
                     success: true,
                     message: 'Email sent successfully',
                     recipient: recipient_email,
+                    template: result.template,
                     messageId: result.messageId
                 });
             } else {
@@ -88,7 +101,9 @@ export const registerSendEmailRoute = (fastify) => {
             status: 'ok',
             service: 'send-email-webhook',
             emailConfigured: !!(EMAIL_CONFIG.SMTP_HOST || EMAIL_CONFIG.AWS_SES_ACCESS_KEY),
-            apiKeyRequired: !!EMAIL_CONFIG.WEBHOOK_API_KEY
+            apiKeyRequired: !!EMAIL_CONFIG.WEBHOOK_API_KEY,
+            availableTemplates: VALID_TEMPLATES,
+            loadedTemplates: getAvailableTemplates()
         });
     });
 };

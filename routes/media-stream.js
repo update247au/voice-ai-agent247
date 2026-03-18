@@ -257,7 +257,7 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         }
 
                         if (functionName === 'send_email_to_property_owner') {
-                            await handleSendEmailToPropertyOwner(args, response, openAiWs);
+                            await handleSendEmailToPropertyOwner(args, callState, response, openAiWs);
                         }
                     }
 
