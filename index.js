@@ -77,6 +77,8 @@ const start = async () => {
         console.log('  ✓ Temperature:', agentSettings.temperature);
         console.log('  ✓ System message length:', agentSettings.system_message?.length || 0);
         console.log('  ✓ Outbound system message length:', agentSettings.outbound_system_message?.length || 0);
+        console.log('  ✓ Outbound voice:', agentSettings.outbound_settings?.voice || 'not set');
+        console.log('  ✓ Outbound temperature:', agentSettings.outbound_settings?.temperature ?? 'not set');
 
         // Register routes
         console.log('\nRegistering routes...');

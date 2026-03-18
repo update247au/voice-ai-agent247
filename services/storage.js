@@ -155,14 +155,38 @@ export const loadAgentSettings = async () => {
         }
     };
 
+    // Helper function to load outbound agent settings (voice, temperature, greeting)
+    const loadOutboundAgentSettings = () => {
+        const defaults = { voice: 'ash', temperature: 0.4, initial_greeting: 'Greet the person and introduce yourself as calling from Update 2 4 7.' };
+        try {
+            const localPath = path.join(process.cwd(), 'ai-setting', 'u247-outbound-agent.json');
+            if (fs.existsSync(localPath)) {
+                const content = fs.readFileSync(localPath, 'utf-8');
+                const parsed = JSON.parse(content);
+                console.log('✓ Loaded outbound agent settings from local file');
+                return {
+                    voice: parsed.voice || defaults.voice,
+                    temperature: parsed.temperature !== undefined ? parsed.temperature : defaults.temperature,
+                    initial_greeting: parsed.initial_greeting || defaults.initial_greeting,
+                    pricing: parsed.pricing || null
+                };
+            }
+        } catch (err) {
+            console.log('[loadOutboundAgentSettings] Error:', err.message);
+        }
+        return defaults;
+    };
+
     // If GCS is not configured, return default settings
     if (!GCS_BUCKET || !storage) {
         console.log('ℹ️  GCS not configured. Loading settings from local files.');
         const systemMsg = await loadSystemMessage();
         const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
+        const outboundAgent = loadOutboundAgentSettings();
         return {
             system_message: systemMsg,
             outbound_system_message: outboundMsg,
+            outbound_settings: outboundAgent,
             voice: 'sage',
             temperature: 0.2,
             use_realtime_transcription: false,
@@ -179,9 +203,11 @@ export const loadAgentSettings = async () => {
             console.log('⚠️  Settings file not found in GCS (gs://' + GCS_BUCKET + '/ai-setting/u247-agent.json). Using default settings.');
             const systemMsg = await loadSystemMessage();
             const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
+            const outboundAgent = loadOutboundAgentSettings();
             return {
                 system_message: systemMsg,
                 outbound_system_message: outboundMsg,
+                outbound_settings: outboundAgent,
                 voice: 'sage',
                 temperature: 0.2,
                 use_realtime_transcription: false,
@@ -200,9 +226,12 @@ export const loadAgentSettings = async () => {
         const systemMsg = await loadSystemMessage();
         const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
         
+        const outboundAgent = loadOutboundAgentSettings();
+        
         const finalSettings = {
             system_message: systemMsg,
             outbound_system_message: outboundMsg,
+            outbound_settings: outboundAgent,
             voice: settings.voice || 'sage',
             temperature: settings.temperature !== undefined ? settings.temperature : 0.2,
             use_realtime_transcription: settings.use_realtime_transcription || false,
@@ -217,9 +246,11 @@ export const loadAgentSettings = async () => {
         console.log('  Falling back to default system message.');
         const systemMsg = await loadSystemMessage();
         const outboundMsg = await loadSystemMessage('u247-outbound-system-message.json');
+        const outboundAgent = loadOutboundAgentSettings();
         return {
             system_message: systemMsg,
             outbound_system_message: outboundMsg,
+            outbound_settings: outboundAgent,
             voice: 'sage',
             temperature: 0.2,
             use_realtime_transcription: false,
