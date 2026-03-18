@@ -252,7 +252,7 @@ export const registerMediaStreamRoute = (fastify, agentSettings) => {
                         }
 
                         if (functionName === 'get_website_troubleshooting') {
-                            await handleGetWebsiteTroubleshooting(args, response, openAiWs);
+                            callState = await handleGetWebsiteTroubleshooting(args, callState, response, openAiWs);
                         }
                     }
 

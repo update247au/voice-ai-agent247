@@ -315,16 +315,29 @@ export const handleGetFaqAnswer = async (args, response, openAiWs) => {
 };
 
 // Handle get_website_troubleshooting function call
-export const handleGetWebsiteTroubleshooting = async (args, response, openAiWs) => {
+export const handleGetWebsiteTroubleshooting = async (args, callState, response, openAiWs) => {
     console.log('[Function Call] get_website_troubleshooting - Args:', args);
     
-    // Check if we have all required information
+    // Initialize website_troubleshooting in callState if not exists
+    if (!callState.website_troubleshooting) {
+        callState.website_troubleshooting = {};
+    }
+    
+    // Merge new args with existing callState data (persist collected info)
+    if (args.website_address) callState.website_troubleshooting.website_address = args.website_address;
+    if (args.first_noticed) callState.website_troubleshooting.first_noticed = args.first_noticed;
+    if (args.error_message) callState.website_troubleshooting.error_message = args.error_message;
+    if (args.other_websites_working) callState.website_troubleshooting.other_websites_working = args.other_websites_working;
+    
+    // Use persisted callState data
     const collectedInfo = {
-        website_address: args.website_address || null,
-        first_noticed: args.first_noticed || null,
-        error_message: args.error_message || null,
-        other_websites_working: args.other_websites_working || null
+        website_address: callState.website_troubleshooting.website_address || null,
+        first_noticed: callState.website_troubleshooting.first_noticed || null,
+        error_message: callState.website_troubleshooting.error_message || null,
+        other_websites_working: callState.website_troubleshooting.other_websites_working || null
     };
+    
+    console.log('[Website Troubleshooting] Current collected info:', collectedInfo);
     
     // Determine which questions still need to be asked
     const questionsToAsk = [];
@@ -368,7 +381,8 @@ export const handleGetWebsiteTroubleshooting = async (args, response, openAiWs) 
             next_field: questionsToAsk[0].field,
             remaining_questions: questionsToAsk.length,
             all_questions: questionsToAsk,
-            INSTRUCTION: `Ask the caller: "${questionsToAsk[0].question}" Then call this function again with the answer to collect more details. Ask ONE question at a time.`
+            REMINDER: "DO NOT ask for information already in collected_so_far. If website_address is set, do NOT ask for it again.",
+            INSTRUCTION: `Ask the caller: "${questionsToAsk[0].question}" Then call this function again with the answer. Ask ONE question at a time. NEVER repeat questions for fields already collected.`
         };
         console.log('[Website Troubleshooting] Need to collect:', questionsToAsk[0].field);
     } else {
@@ -392,4 +406,6 @@ export const handleGetWebsiteTroubleshooting = async (args, response, openAiWs) 
     };
     openAiWs.send(JSON.stringify(functionOutput));
     openAiWs.send(JSON.stringify({ type: 'response.create' }));
+    
+    return callState;
 };

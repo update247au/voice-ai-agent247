@@ -64,6 +64,8 @@ export const sendCallLog = async (callData) => {
             headers['X-API-Key'] = CALL_LOG_API_CONFIG.API_KEY;
         }
 
+        console.log(`[Call Log API] Posting to: ${CALL_LOG_API_CONFIG.API_URL}`);
+        
         const response = await fetch(CALL_LOG_API_CONFIG.API_URL, {
             method: 'POST',
             headers: headers,
@@ -73,7 +75,20 @@ export const sendCallLog = async (callData) => {
 
         clearTimeout(timeoutId);
 
-        const data = await response.json();
+        // Get response as text first to handle non-JSON responses
+        const responseText = await response.text();
+        
+        // Check if response is JSON
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseErr) {
+            console.error(`[Call Log API] HTTP ${response.status} - Response is not JSON:`, responseText.substring(0, 200));
+            return { 
+                success: false, 
+                error: `Server returned non-JSON response (HTTP ${response.status}). Check API URL: ${CALL_LOG_API_CONFIG.API_URL}` 
+            };
+        }
 
         if (!response.ok) {
             console.error(`[Call Log API] HTTP ${response.status}:`, data);

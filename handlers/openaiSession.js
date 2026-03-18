@@ -22,7 +22,8 @@ export const getOpenAITools = () => {
                     current_state: { type: "string", description: "Current state in the flow (A-H)" },
                     sales_need: { type: "string", description: "What the sales/new caller is looking for" },
                     demo_choice: { type: "string", description: "Demo preference: self_serve or book_demo", enum: ["self_serve", "book_demo"] },
-                    demo_preferred_time: { type: "string", description: "Caller's preferred day and time for a booked demo" }
+                    demo_preferred_time: { type: "string", description: "Caller's preferred day and time for a booked demo" },
+                    escalation_reason: { type: "string", description: "Reason for escalation if caller requested human agent" }
                 }
             }
         },
